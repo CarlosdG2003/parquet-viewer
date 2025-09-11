@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parquet Viewer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Vista principal: Lista de catálogos -->
+        <div id="catalogListView" class="view active">
+            <header class="page-header">
+                <h1 class="page-title">Parquet Viewer</h1>
+            </header>
+
+            <section class="search-section">
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            class="search-input"
+                            placeholder="Buscar catálogos por nombre, descripción, responsable o tags..."
+                        >
+                        <button id="searchButton" class="search-button">Buscar</button>
+                    </div>
+                    <button id="filtersButton" class="filters-button">Filtros</button>
+                </div>
+
+                <div id="filtersPanel" class="filters-panel hidden">
+                    <div class="filter-group">
+                        <label for="responsibleFilter">Responsable</label>
+                        <select id="responsibleFilter" class="filter-select">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="formatFilter">Formato</label>
+                        <select id="formatFilter" class="filter-select">
+                            <option value="">Todos</option>
+                            <option value="parquet">PARQUET</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="permissionsFilter">Permisos</label>
+                        <select id="permissionsFilter" class="filter-select">
+                            <option value="">Todos</option>
+                            <option value="public">Público</option>
+                            <option value="restricted">Restringido</option>
+                            <option value="private">Privado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="results-summary">
+                    <span id="resultsCount">Total de catálogos: 0</span>
+                </div>
+            </section>
+
+            <section class="catalogs-section">
+                <div id="catalogsGrid" class="catalogs-grid">
+                    <div class="loading-state">Cargando catálogos...</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Vista de detalle: Catálogo específico -->
+        <div id="catalogDetailView" class="view hidden">
+            <header class="detail-header">
+                <button id="backToCatalogs" class="back-button">Volver</button>
+                <div class="catalog-header-info">
+                    <h1 id="catalogTitle" class="catalog-title"></h1>
+                    <span id="catalogPermissions" class="permissions-badge"></span>
+                </div>
+            </header>
+
+            <section class="catalog-info-section">
+                <div class="info-header">
+                    <h2>Información del Catálogo</h2>
+                </div>
+                <div class="catalog-metadata">
+                    <p id="catalogDescription" class="catalog-description"></p>
+                    <div class="metadata-grid">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Responsable</span>
+                            <span id="catalogResponsible" class="metadata-value"></span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Actualización</span>
+                            <span id="catalogFrequency" class="metadata-value"></span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Registros</span>
+                            <span id="catalogRecords" class="metadata-value"></span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Formato</span>
+                            <span class="metadata-value">PARQUET</span>
+                        </div>
+                    </div>
+                    <div id="catalogTags" class="tags-container"></div>
+                    <div class="last-updated">
+                        Actualizado: <span id="catalogLastUpdated"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="catalog-data-section">
+                <nav class="data-tabs">
+                    <button class="data-tab active" data-tab="data">Datos</button>
+                    <button class="data-tab" data-tab="schema">Esquema</button>
+                    <button class="data-tab" data-tab="graphics">Gráficas</button>
+                    <button class="data-tab" data-tab="trace">Trazabilidad</button>
+                </nav>
+
+                <div class="tab-panels">
+                    <div id="dataPanel" class="tab-panel active">
+                        <div class="panel-header">
+                            <h3>Vista de Datos - PARQUET</h3>
+                            <div class="panel-controls">
+                                <button id="columnsButton" class="control-button">Columnas</button>
+                                <button id="exportButton" class="control-button primary">Exportar</button>
+                            </div>
+                        </div>
+                        
+                        <div id="columnsSelector" class="columns-selector hidden">
+                            <select id="columnsList" multiple class="columns-list"></select>
+                            <button id="applyColumns" class="apply-button">Aplicar</button>
+                        </div>
+
+                        <div class="data-filters">
+                            <input type="text" id="dataFilter" class="data-filter-input" placeholder="Filtrar datos...">
+                            <div id="recordsInfo" class="records-info"></div>
+                        </div>
+
+                        <div id="dataTableContainer" class="table-container">
+                            <div class="loading-state">Cargando datos...</div>
+                        </div>
+
+                        <div id="paginationContainer" class="pagination-container"></div>
+                    </div>
+
+                    <div id="schemaPanel" class="tab-panel hidden">
+                        <div class="panel-header">
+                            <h3>Esquema de Datos</h3>
+                        </div>
+                        <div id="schemaContent" class="schema-content">
+                            <div class="loading-state">Cargando esquema...</div>
+                        </div>
+                    </div>
+
+                    <div id="graphicsPanel" class="tab-panel hidden">
+                        <div class="panel-header">
+                            <h3>Gráficas</h3>
+                        </div>
+                        <div class="coming-soon">
+                            <p>Proximamente</p>
+                        </div>
+                    </div>
+
+                    <div id="tracePanel" class="tab-panel hidden">
+                        <div class="panel-header">
+                            <h3>Trazabilidad</h3>
+                        </div>
+                        <div class="coming-soon">
+                            <p>Procimamente</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <!-- Utilidades -->
+    <script src="/static/js/utils/api.js"></script>
+    <script src="/static/js/utils/dom.js"></script>
+
+    <!-- Componentes -->
+    <script src="/static/js/utils/components/CatalogCard.js"></script>
+    <script src="/static/js/utils/components/SearchBar.js"></script>
+    <script src="/static/js/utils/components/DataTable.js"></script>
+
+    <!-- Páginas -->
+    <script src="/static/js/utils/components/pages/CatalogDetail.js"></script>
+    <script src="/static/js/utils/components/pages/CatalogList.js"></script>
+
+    <!-- App principal (mantener el actual por ahora) -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
