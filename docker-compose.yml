@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://parquet_user:parquet_pass@postgres:5432/parquet_viewer
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=parquet_viewer
+      - POSTGRES_USER=parquet_user
+      - POSTGRES_PASSWORD=parquet_pass
+    volumes:
+      - ./parquet_files:/app/parquet_files
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - parquet_network
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=parquet_viewer
+      - POSTGRES_USER=parquet_user
+      - POSTGRES_PASSWORD=parquet_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parquet_user -d parquet_viewer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - parquet_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  parquet_network:
+    driver: bridge

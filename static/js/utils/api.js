@@ -35,29 +35,109 @@ class ApiClient {
     }
 
     /**
-     * Obtiene todos los archivos/catálogos
+     * Obtiene todos los archivos/catálogos con datos combinados (DuckDB + PostgreSQL)
      */
-    async getFiles() {
-        return this.request('/files');
+    async getFiles(filters = {}) {
+        let endpoint = '/files';
+        const params = new URLSearchParams();
+        
+        if (filters.search) params.append('search', filters.search);
+        if (filters.responsible) params.append('responsible', filters.responsible);
+        if (filters.permissions) params.append('permissions', filters.permissions);
+        if (filters.tags && filters.tags.length > 0) {
+            params.append('tags', filters.tags.join(','));
+        }
+        
+        if (params.toString()) {
+            endpoint += `?${params.toString()}`;
+        }
+        
+        return this.request(endpoint);
     }
 
     /**
-     * Obtiene información de un archivo específico
+     * Obtiene información combinada de un archivo específico
      */
     async getFileInfo(filename) {
         return this.request(`/files/${filename}/info`);
     }
 
     /**
-     * Obtiene metadatos de un archivo (opcional, puede fallar)
+     * Obtiene metadatos específicos de un archivo (solo PostgreSQL)
      */
     async getFileMetadata(filename) {
         try {
-            return await this.request(`/files/${filename}/metadata`);
+            return await this.request(`/metadata/${filename}`);
         } catch (error) {
             console.warn(`Metadata not available for ${filename}`);
             return null;
         }
+    }
+
+    /**
+     * Crea nuevos metadatos para un archivo
+     */
+    async createFileMetadata(metadata) {
+        return this.request('/metadata', {
+            method: 'POST',
+            body: JSON.stringify(metadata)
+        });
+    }
+
+    /**
+     * Actualiza metadatos de un archivo
+     */
+    async updateFileMetadata(filename, metadata, changedBy = 'user') {
+        const endpoint = `/metadata/${filename}?changed_by=${encodeURIComponent(changedBy)}`;
+        return this.request(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(metadata)
+        });
+    }
+
+    /**
+     * Elimina metadatos de un archivo
+     */
+    async deleteFileMetadata(filename) {
+        return this.request(`/metadata/${filename}`, {
+            method: 'DELETE'
+        });
+    }
+
+    /**
+     * Obtiene historial de cambios de metadatos
+     */
+    async getFileMetadataHistory(filename) {
+        return this.request(`/metadata/${filename}/history`);
+    }
+
+    /**
+     * Obtiene filtros únicos para el frontend
+     */
+    async getUniqueResponsibles() {
+        return this.request('/metadata/filters/responsibles');
+    }
+
+    async getUniqueTags() {
+        return this.request('/metadata/filters/tags');
+    }
+
+    /**
+     * Sincroniza estadísticas técnicas de un archivo
+     */
+    async syncFileStats(filename) {
+        return this.request(`/sync/file/${filename}`, {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Sincroniza estadísticas de todos los archivos
+     */
+    async syncAllFilesStats() {
+        return this.request('/sync/all-files', {
+            method: 'POST'
+        });
     }
 
     /**

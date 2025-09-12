@@ -43,7 +43,7 @@ class CatalogListPage {
             this.allCatalogs = await apiClient.getFiles();
             this.filteredCatalogs = [...this.allCatalogs];
             
-            this._populateFilters();
+            await this._loadFilterOptions();
             this._renderCatalogs();
             this._updateResultsCount();
             
@@ -53,87 +53,59 @@ class CatalogListPage {
     }
 
     /**
-     * Maneja la búsqueda de catálogos
+     * Carga opciones para filtros desde la API
      */
-    _handleSearch(searchTerm) {
-        if (!searchTerm.trim()) {
-            this.filteredCatalogs = [...this.allCatalogs];
-        } else {
-            this.filteredCatalogs = this.allCatalogs.filter(catalog => 
-                this._matchesSearch(catalog, searchTerm.toLowerCase())
-            );
+    async _loadFilterOptions() {
+        try {
+            const [responsiblesResult, tagsResult] = await Promise.all([
+                apiClient.getUniqueResponsibles(),
+                apiClient.getUniqueTags()
+            ]);
+            
+            this.searchBar.updateFilterOptions('responsible', responsiblesResult.responsibles);
+            // Tags se manejan diferente, se podrían agregar como opciones multi-select
+            
+        } catch (error) {
+            console.warn('Error loading filter options:', error);
         }
-
-        this._applyCurrentFilters();
     }
 
     /**
-     * Verifica si un catálogo coincide con el término de búsqueda
+     * Maneja la búsqueda de catálogos usando el backend
      */
-    _matchesSearch(catalog, searchTerm) {
-        const searchableFields = [
-            catalog.title || catalog.name,
-            catalog.description || '',
-            catalog.responsible || '',
-            ...(catalog.tags || [])
-        ];
-
-        const searchableText = searchableFields.join(' ').toLowerCase();
-        return searchableText.includes(searchTerm);
+    async _handleSearch(searchTerm) {
+        try {
+            this._showLoadingState();
+            
+            const filters = this.searchBar._getFilterValues();
+            const searchFilters = {
+                search: searchTerm.trim() || undefined,
+                responsible: filters.responsible || undefined,
+                permissions: filters.permissions || undefined
+                // Tags se pueden agregar aquí cuando se implemente el selector
+            };
+            
+            // Si no hay filtros, cargar todos
+            if (!searchFilters.search && !searchFilters.responsible && !searchFilters.permissions) {
+                this.filteredCatalogs = await apiClient.getFiles();
+            } else {
+                this.filteredCatalogs = await apiClient.getFiles(searchFilters);
+            }
+            
+            this._renderCatalogs();
+            this._updateResultsCount();
+            
+        } catch (error) {
+            this._showErrorState('Error en búsqueda: ' + error.message);
+        }
     }
 
     /**
-     * Maneja cambios en los filtros
+     * Maneja cambios en los filtros usando el backend
      */
-    _handleFilterChange(filters) {
-        this._applyCurrentFilters();
-    }
-
-    /**
-     * Aplica los filtros actuales a los catálogos
-     */
-    _applyCurrentFilters() {
-        const filters = this.searchBar.validateFilters() ? this.searchBar._getFilterValues() : {};
-        
-        let filtered = [...this.filteredCatalogs];
-
-        // Aplicar filtro por responsable
-        if (filters.responsible) {
-            filtered = filtered.filter(catalog => 
-                catalog.responsible === filters.responsible
-            );
-        }
-
-        // Aplicar filtro por permisos
-        if (filters.permissions) {
-            filtered = filtered.filter(catalog => 
-                (catalog.permissions || 'public') === filters.permissions
-            );
-        }
-
-        // Aplicar filtro por formato (siempre parquet por ahora)
-        if (filters.format && filters.format !== 'parquet') {
-            filtered = [];
-        }
-
-        this.filteredCatalogs = filtered;
-        this._renderCatalogs();
-        this._updateResultsCount();
-    }
-
-    /**
-     * Popula los filtros con valores únicos de los catálogos
-     */
-    _populateFilters() {
-        // Extraer responsables únicos
-        const responsibles = [...new Set(
-            this.allCatalogs
-                .map(catalog => catalog.responsible)
-                .filter(Boolean)
-        )].sort();
-
-        // Actualizar filtro de responsables
-        this.searchBar.updateFilterOptions('responsible', responsibles);
+    async _handleFilterChange(filters) {
+        const searchTerm = this.searchBar.getSearchTerm();
+        await this._handleSearch(searchTerm);
     }
 
     /**
