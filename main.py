@@ -3,12 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
-from pathlib import Path
 
 from api.routes import router
+from api.admin_routes import admin_router
 from config import settings
 
-app = FastAPI(title="Parquet Viewer", version="1.0.0") # Crea la instancia de FastAPI
+app = FastAPI(title="Parquet Viewer", version="1.0.0")
 
 # CORS para permitir peticiones desde el navegador
 app.add_middleware( 
@@ -22,9 +22,12 @@ app.add_middleware(
 # Montar archivos estáticos
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Incluir rutas principales
 app.include_router(router)
 
-# Incluye las rutas de la API
+# Incluir rutas de administrador
+app.include_router(admin_router, prefix="/admin", tags=["admin"])
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     with open("templates/index.html", "r", encoding="utf-8") as file:

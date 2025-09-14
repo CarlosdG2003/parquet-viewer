@@ -1,8 +1,27 @@
--- Inicialización de la base de datos PostgreSQL para Parquet Viewer
--- Este script se ejecuta automáticamente al crear el contenedor
+-- Crear base de datos y usuario si no existen
+-- Este script debe ejecutarse como superusuario de PostgreSQL
 
--- Crear extensión para arrays si no existe
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Crear usuario si no existe
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'parquet_user') THEN
+        CREATE USER parquet_user WITH PASSWORD 'parquet_pass';
+    END IF;
+END
+$$;
+
+-- Crear base de datos si no existe
+SELECT 'CREATE DATABASE parquet_viewer OWNER parquet_user'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'parquet_viewer')\gexec
+
+-- Conectar a la base de datos parquet_viewer
+\c parquet_viewer;
+
+-- Dar permisos al usuario
+GRANT ALL PRIVILEGES ON DATABASE parquet_viewer TO parquet_user;
+GRANT ALL ON SCHEMA public TO parquet_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO parquet_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO parquet_user;
 
 -- Tabla principal de metadatos de archivos
 CREATE TABLE IF NOT EXISTS file_metadata (
@@ -14,17 +33,17 @@ CREATE TABLE IF NOT EXISTS file_metadata (
     frequency VARCHAR(100),
     permissions VARCHAR(50) DEFAULT 'public',
     tags TEXT[],
-    file_size_mb DECIMAL(10,2),
+    file_size_mb DECIMAL(10, 2),
     row_count BIGINT,
     column_count INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de historial de cambios (auditoria)
+-- Tabla de historial de cambios en metadatos
 CREATE TABLE IF NOT EXISTS metadata_history (
     id SERIAL PRIMARY KEY,
-    file_id INTEGER REFERENCES file_metadata(id) ON DELETE CASCADE,
+    file_id INTEGER NOT NULL REFERENCES file_metadata(id) ON DELETE CASCADE,
     field_changed VARCHAR(100) NOT NULL,
     old_value TEXT,
     new_value TEXT,
@@ -32,15 +51,17 @@ CREATE TABLE IF NOT EXISTS metadata_history (
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Índices para optimizar consultas
+-- Índices para mejorar rendimiento
 CREATE INDEX IF NOT EXISTS idx_file_metadata_filename ON file_metadata(filename);
 CREATE INDEX IF NOT EXISTS idx_file_metadata_responsible ON file_metadata(responsible);
 CREATE INDEX IF NOT EXISTS idx_file_metadata_permissions ON file_metadata(permissions);
 CREATE INDEX IF NOT EXISTS idx_file_metadata_tags ON file_metadata USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_file_metadata_updated_at ON file_metadata(updated_at);
+
 CREATE INDEX IF NOT EXISTS idx_metadata_history_file_id ON metadata_history(file_id);
 CREATE INDEX IF NOT EXISTS idx_metadata_history_changed_at ON metadata_history(changed_at);
 
--- Función para actualizar timestamp automáticamente
+-- Función para actualizar automáticamente updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -50,46 +71,20 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger para actualizar updated_at automáticamente
+DROP TRIGGER IF EXISTS update_file_metadata_updated_at ON file_metadata;
 CREATE TRIGGER update_file_metadata_updated_at 
     BEFORE UPDATE ON file_metadata 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- Insertar algunos datos de ejemplo
-INSERT INTO file_metadata (
-    filename, 
-    title, 
-    description, 
-    responsible, 
-    frequency, 
-    permissions, 
-    tags
-) VALUES 
-(
-    'ventas_retail_2024.parquet',
-    'Ventas Retail 2024',
-    'Datos de transacciones de ventas del sistema de retail incluyendo productos, precios, cantidades y información del vendedor.',
-    'María González',
-    'Diario',
-    'public',
-    ARRAY['ventas', 'retail', 'transacciones', 'productos']
-),
-(
-    'inventario_almacenes.parquet',
-    'Inventario Almacenes',
-    'Control de stock y movimientos de inventario en todos los almacenes de la compañía con trazabilidad completa.',
-    'Carlos Ruiz',
-    'Tiempo Real',
-    'restricted',
-    ARRAY['inventario', 'almacen', 'stock', 'logistica']
-),
-(
-    'datos_financieros_q4.parquet',
-    'Datos Financieros Q4',
-    'Información financiera consolidada del cuarto trimestre incluyendo P&L, balance y flujo de caja.',
-    'Ana Martínez',
-    'Trimestral',
-    'private',
-    ARRAY['financiero', 'contabilidad', 'balance', 'P&L']
-)
-ON CONFLICT (filename) DO NOTHING;
+-- Dar permisos finales al usuario
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO parquet_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO parquet_user;
+
+-- Datos de ejemplo (opcional)
+-- INSERT INTO file_metadata (filename, title, description, responsible, frequency, permissions, tags)
+-- VALUES 
+--     ('sample_data.parquet', 'Datos de Ejemplo', 'Archivo de prueba con datos sintéticos', 'Admin', 'monthly', 'public', ARRAY['ejemplo', 'test']),
+--     ('production_data.parquet', 'Datos de Producción', 'Datos reales de minería', 'Data Team', 'daily', 'internal', ARRAY['minería', 'producción']);
+
+COMMIT;

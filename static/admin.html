@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administrador - Parquet Viewer</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>Panel de Administrador</h1>
+            <div class="header-actions">
+                <span id="adminUser" class="admin-user"></span>
+                <a href="/" class="btn-secondary">Ver App Principal</a>
+                <button onclick="logout()" class="btn-danger">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <nav class="admin-nav">
+            <button class="nav-btn active" onclick="showSection('dashboard')">Dashboard</button>
+            <button class="nav-btn" onclick="showSection('metadata')">Gestionar Metadatos</button>
+            <button class="nav-btn" onclick="showSection('files')">Archivos sin Metadatos</button>
+        </nav>
+
+        <!-- Dashboard Section -->
+        <section id="dashboardSection" class="admin-section">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h3>Archivos Total</h3>
+                    <div class="stat-number" id="totalFiles">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Con Metadatos</h3>
+                    <div class="stat-number" id="filesWithMetadata">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Sin Metadatos</h3>
+                    <div class="stat-number" id="filesWithoutMetadata">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Último Actualizado</h3>
+                    <div class="stat-text" id="lastUpdated">-</div>
+                </div>
+            </div>
+
+            <div class="recent-activity">
+                <h3>Actividad Reciente</h3>
+                <div id="recentActivity" class="activity-list"></div>
+            </div>
+        </section>
+
+        <!-- Metadata Management Section -->
+        <section id="metadataSection" class="admin-section hidden">
+            <div class="section-header">
+                <h2>Gestión de Metadatos</h2>
+                <button class="btn-primary" onclick="showCreateForm()">Crear Metadatos</button>
+            </div>
+
+            <div class="filters">
+                <input type="text" id="searchMetadata" placeholder="Buscar..." class="search-input">
+                <select id="filterByResponsible" class="filter-select">
+                    <option value="">Todos los responsables</option>
+                </select>
+                <select id="filterByPermission" class="filter-select">
+                    <option value="">Todos los permisos</option>
+                </select>
+                <button onclick="applyFilters()" class="btn-secondary">Filtrar</button>
+            </div>
+
+            <div class="metadata-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Archivo</th>
+                            <th>Título</th>
+                            <th>Responsable</th>
+                            <th>Permisos</th>
+                            <th>Actualizado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="metadataTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Files without metadata section -->
+        <section id="filesSection" class="admin-section hidden">
+            <div class="section-header">
+                <h2>Archivos sin Metadatos</h2>
+                <button class="btn-refresh" onclick="loadFilesWithoutMetadata()">Actualizar</button>
+            </div>
+            <div id="filesWithoutMetadataList" class="files-grid"></div>
+        </section>
+    </div>
+
+    <!-- Modal para crear/editar metadatos -->
+    <div id="metadataModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Crear Metadatos</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            
+            <form id="metadataForm" class="metadata-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="filename">Archivo *</label>
+                        <select id="filename" required>
+                            <option value="">Seleccionar archivo...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="title">Título *</label>
+                        <input type="text" id="title" required maxlength="500">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Descripción</label>
+                    <textarea id="description" rows="3"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="responsible">Responsable</label>
+                        <input type="text" id="responsible">
+                    </div>
+                    <div class="form-group">
+                        <label for="frequency">Frecuencia de Actualización</label>
+                        <select id="frequency">
+                            <option value="">Seleccionar...</option>
+                            <option value="daily">Diaria</option>
+                            <option value="weekly">Semanal</option>
+                            <option value="monthly">Mensual</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="yearly">Anual</option>
+                            <option value="on-demand">Bajo demanda</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="permissions">Nivel de Permisos</label>
+                        <select id="permissions">
+                            <option value="public">Público</option>
+                            <option value="internal">Interno</option>
+                            <option value="confidential">Confidencial</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tags">Tags</label>
+                        <input type="text" id="tags" placeholder="Separar con comas">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeModal()" class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="submitBtn">Crear Metadatos</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading spinner -->
+    <div id="loadingSpinner" class="loading-spinner hidden">
+        <div class="spinner"></div>
+        <p>Cargando...</p>
+    </div>
+
+    <!-- Notification system -->
+    <div id="notification" class="notification hidden">
+        <span id="notificationMessage"></span>
+        <button onclick="closeNotification()" class="notification-close">&times;</button>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-FROM python:3.13.7
+FROM python:3.12-slim
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -6,6 +6,7 @@ WORKDIR /app
 # Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y \
     build-essential \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements y instalar dependencias Python

@@ -18,6 +18,12 @@ class Settings:
     POSTGRES_USER = os.getenv("POSTGRES_USER", "parquet_user")
     POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "parquet_pass")
 
+    # Configuración de administradores
+    ADMIN_USERS = {
+        os.getenv("ADMIN_USERNAME", "admin"): os.getenv("ADMIN_PASSWORD", "admin123"),
+        # Agregar más admins aquí o desde variables de entorno
+    }
+
     @property
     def database_url(self):
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
