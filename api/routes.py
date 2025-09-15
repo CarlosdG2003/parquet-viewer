@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from services.chart_service import ChartService
 from core.database import get_db_session, db_manager
 from services.metadata_service import MetadataService
 from services.file_service import FileService
@@ -24,6 +25,12 @@ async def get_file_service(db_session: AsyncSession = Depends(get_db_session)) -
 # Dependency para MetadataService
 async def get_metadata_service(db_session: AsyncSession = Depends(get_db_session)) -> MetadataService:
     return MetadataService(db_session)
+
+async def get_chart_service(
+    db_session: AsyncSession = Depends(get_db_session)
+) -> ChartService:
+    duckdb_conn = db_manager.get_duckdb_connection()
+    return ChartService(duckdb_conn)
 
 @router.get("/files", response_model=List[CombinedFileInfo])
 async def list_files_combined(
@@ -243,3 +250,33 @@ async def get_file_stats_legacy(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener estadísticas: {str(e)}")
+    
+
+@router.get("/files/{filename}/charts/columns")
+async def get_file_columns_for_charts(
+    filename: str,
+    chart_service: ChartService = Depends(get_chart_service)
+):
+    """Obtiene información de columnas para el generador de gráficas manual"""
+    try:
+        columns_info = await chart_service.get_file_columns_info(filename)
+        return columns_info
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo columnas: {str(e)}")
+
+@router.post("/files/{filename}/charts/custom")
+async def generate_custom_chart(
+    filename: str,
+    chart_config: dict,
+    chart_service: ChartService = Depends(get_chart_service)
+):
+    """Genera una gráfica personalizada según configuración del usuario"""
+    try:
+        chart_data = await chart_service.generate_custom_chart(filename, chart_config)
+        return chart_data
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando gráfica: {str(e)}")

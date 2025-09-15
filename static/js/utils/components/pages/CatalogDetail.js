@@ -10,6 +10,7 @@ class CatalogDetailPage {
         this.selectedColumns = [];
         
         this.dataTable = null;
+        this.chartViewer = null;
         this.onBackCallback = null;
         
         this.init();
@@ -20,6 +21,7 @@ class CatalogDetailPage {
      */
     init() {
         this._initializeDataTable();
+        this._initializeChartViewer();
         this._bindEvents();
     }
 
@@ -31,6 +33,13 @@ class CatalogDetailPage {
             onPageChange: (page) => this._loadCatalogData(page),
             onColumnSelect: (columns) => this._handleColumnSelection(columns)
         });
+    }
+
+    /**
+     * Inicializa el visor de gráficas
+     */
+    _initializeChartViewer() {
+        this.chartViewer = new ChartViewer('#chartsPanel');
     }
 
     /**
@@ -89,6 +98,11 @@ class CatalogDetailPage {
             // Cargar datos por defecto
             await this._loadCatalogData(1);
             
+            // Inicializar gráficas para este archivo
+            if (this.chartViewer) {
+                await this.chartViewer.initialize(this.currentCatalog.name);
+            }
+            
             // Mostrar la vista
             this.show();
             
@@ -127,7 +141,12 @@ class CatalogDetailPage {
         this._updateElement('#catalogDescription', 
             this.currentCatalog.description || 'Sin descripción disponible');
         this._updateElement('#catalogResponsible', this.currentCatalog.responsible || 'N/A');
-        this._updateElement('#catalogFrequency', this.currentCatalog.frequency || 'N/A');
+        
+        // Aplicar traducción a la frecuencia
+        const frequency = this.currentCatalog.frequency || 'N/A';
+        const translatedFrequency = this._translateFrequency(frequency);
+        this._updateElement('#catalogFrequency', translatedFrequency);
+        
         this._updateElement('#catalogRecords', 
             DOM.formatNumber(this.catalogInfo.row_count));
         this._updateElement('#catalogLastUpdated', 
@@ -138,15 +157,44 @@ class CatalogDetailPage {
     }
 
     /**
+     * Traduce frecuencias al español
+     */
+    _translateFrequency(frequency) {
+        const translations = {
+            'daily': 'Diaria',
+            'weekly': 'Semanal',
+            'monthly': 'Mensual',
+            'quarterly': 'Trimestral',
+            'yearly': 'Anual',
+            'on-demand': 'Bajo demanda'
+        };
+        return translations[frequency] || frequency;
+    }
+
+    /**
      * Actualiza el badge de permisos
      */
     _updatePermissionsBadge() {
         const permissionsElement = DOM.$('#catalogPermissions');
         if (permissionsElement) {
             const permissions = this.currentCatalog.permissions || 'public';
-            permissionsElement.textContent = permissions;
+            // Aplicar traducción a los permisos
+            const translatedPermissions = this._translatePermission(permissions);
+            permissionsElement.textContent = translatedPermissions;
             permissionsElement.className = `permissions-badge ${permissions}`;
         }
+    }
+
+    /**
+     * Traduce permisos al español
+     */
+    _translatePermission(permission) {
+        const translations = {
+            'public': 'Público',
+            'internal': 'Interno',
+            'confidential': 'Confidencial'
+        };
+        return translations[permission] || permission;
     }
 
     /**
@@ -185,6 +233,9 @@ class CatalogDetailPage {
         // Cargar contenido específico
         if (tabName === 'schema') {
             this._loadSchema();
+        } else if (tabName === 'charts') {
+            // Las gráficas ya se inicializan al abrir el catálogo
+            // No es necesario cargar nada adicional aquí
         }
     }
 
@@ -229,7 +280,7 @@ class CatalogDetailPage {
     }
 
     /**
-     * Renderiza el esquema
+     * Renderiza el esquema - MANTIENE LA VERSIÓN ORIGINAL QUE FUNCIONA
      */
     _renderSchema(schema) {
         const schemaContent = DOM.$('#schemaContent');
@@ -309,7 +360,7 @@ class CatalogDetailPage {
     _updateRecordsInfo(pagination) {
         const recordsInfo = DOM.$('#recordsInfo');
         if (recordsInfo) {
-            recordsInfo.textContent = `${DOM.formatNumber(pagination.total_rows)} registros`;
+            recordsInfo.textContent = `${DOM.formatNumber(pagination.total)} registros`;
         }
     }
 
@@ -371,6 +422,21 @@ class CatalogDetailPage {
         if (this.dataTable) {
             this.dataTable.clear();
         }
+        
+        // Limpiar gráficas
+        if (this.chartViewer) {
+            this.chartViewer.clear();
+        }
+    }
+
+    /**
+     * Obtiene el catálogo actual por nombre (usado por navegación del navegador)
+     */
+    getCatalogByName(catalogName) {
+        if (this.currentCatalog && this.currentCatalog.name === catalogName) {
+            return this.currentCatalog;
+        }
+        return null;
     }
 }
 

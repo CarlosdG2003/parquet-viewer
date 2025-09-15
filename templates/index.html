@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parquet Viewer</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/graficas.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <div class="app">
@@ -110,7 +112,7 @@
                 <nav class="data-tabs">
                     <button class="data-tab active" data-tab="data">Datos</button>
                     <button class="data-tab" data-tab="schema">Esquema</button>
-                    <button class="data-tab" data-tab="graphics">Gráficas</button>
+                    <button class="data-tab" data-tab="charts">Gráficas</button>
                     <button class="data-tab" data-tab="trace">Trazabilidad</button>
                 </nav>
 
@@ -150,13 +152,11 @@
                         </div>
                     </div>
 
-                    <div id="graphicsPanel" class="tab-panel hidden">
+                    <div id="chartsPanel" class="tab-panel hidden">
                         <div class="panel-header">
                             <h3>Gráficas</h3>
                         </div>
-                        <div class="coming-soon">
-                            <p>Proximamente</p>
-                        </div>
+                        <!-- El contenido se genera dinámicamente por ChartViewer -->
                     </div>
 
                     <div id="tracePanel" class="tab-panel hidden">
@@ -164,7 +164,7 @@
                             <h3>Trazabilidad</h3>
                         </div>
                         <div class="coming-soon">
-                            <p>Procimamente</p>
+                            <p>Proximamente</p>
                         </div>
                     </div>
                 </div>
@@ -172,7 +172,6 @@
         </div>
     </div>
 
-    <script src="/static/app.js"></script>
     <!-- Utilidades -->
     <script src="/static/js/utils/api.js"></script>
     <script src="/static/js/utils/dom.js"></script>
@@ -181,12 +180,13 @@
     <script src="/static/js/utils/components/CatalogCard.js"></script>
     <script src="/static/js/utils/components/SearchBar.js"></script>
     <script src="/static/js/utils/components/DataTable.js"></script>
+    <script src="/static/js/utils/components/ChartViewer.js"></script>
 
     <!-- Páginas -->
-    <script src="/static/js/utils/components/pages/CatalogDetail.js"></script>
     <script src="/static/js/utils/components/pages/CatalogList.js"></script>
+    <script src="/static/js/utils/components/pages/CatalogDetail.js"></script>
 
-    <!-- App principal (mantener el actual por ahora) -->
+    <!-- App principal -->
     <script src="/static/app.js"></script>
 </body>
 </html>

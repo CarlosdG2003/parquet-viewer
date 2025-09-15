@@ -172,6 +172,23 @@ class ApiClient {
     async getFileStats(filename) {
         return this.request(`/files/${filename}/stats`);
     }
+
+    /**
+     * Obtiene información de columnas para crear gráficas manualmente
+     */
+    async getFileColumnsForCharts(filename) {
+        return this.request(`/files/${filename}/charts/columns`);
+    }
+
+    /**
+     * Genera una gráfica personalizada
+     */
+    async generateCustomChart(filename, chartConfig) {
+        return this.request(`/files/${filename}/charts/custom`, {
+            method: 'POST',
+            body: JSON.stringify(chartConfig)
+        });
+    }
 }
 
 // Crear instancia global

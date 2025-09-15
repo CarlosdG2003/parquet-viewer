@@ -36,10 +36,14 @@ class CatalogCard {
      * Genera el HTML interno de la tarjeta
      */
     _getCardHTML(permissions, tags, lastUpdated) {
+        // Traducir los valores antes de mostrarlos
+        const translatedPermissions = this._translatePermission(permissions);
+        const translatedFrequency = this._translateFrequency(this.catalog.frequency);
+
         return `
             <div class="catalog-card-header">
                 <h3 class="catalog-name">${DOM.escapeHtml(this.catalog.title || this.catalog.name)}</h3>
-                <span class="permission-badge ${permissions}">${permissions}</span>
+                <span class="permission-badge ${permissions}">${translatedPermissions}</span>
             </div>
             
             <p class="catalog-description">
@@ -53,7 +57,7 @@ class CatalogCard {
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Actualización</span>
-                    <span class="meta-value">${DOM.escapeHtml(this.catalog.frequency || 'N/A')}</span>
+                    <span class="meta-value">${translatedFrequency}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Registros</span>
@@ -86,6 +90,37 @@ class CatalogCard {
         ).join('');
 
         return `<div class="catalog-tags">${tagsHTML}</div>`;
+    }
+
+    /**
+     * Traduce los valores de frecuencia al español
+     */
+    _translateFrequency(frequency) {
+        if (!frequency) return 'N/A';
+        
+        const translations = {
+            'daily': 'Diaria',
+            'weekly': 'Semanal',
+            'monthly': 'Mensual',
+            'quarterly': 'Trimestral',
+            'yearly': 'Anual',
+            'on-demand': 'Bajo demanda'
+        };
+        return translations[frequency] || frequency;
+    }
+
+    /**
+     * Traduce los valores de permisos al español
+     */
+    _translatePermission(permission) {
+        if (!permission) return 'Público';
+        
+        const translations = {
+            'public': 'Público',
+            'internal': 'Interno',
+            'confidential': 'Confidencial'
+        };
+        return translations[permission] || permission;
     }
 
     /**

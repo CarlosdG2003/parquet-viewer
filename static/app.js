@@ -290,3 +290,34 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
     
     console.log(' Modo desarrollo: usa debugApp() para inspeccionar el estado');
 }
+
+/**
+ * Funciones de traducción para la interfaz
+ */
+window.translateFrequency = function(frequency) {
+    const translations = {
+        'daily': 'Diaria',
+        'weekly': 'Semanal',
+        'monthly': 'Mensual', 
+        'quarterly': 'Trimestral',
+        'yearly': 'Anual',
+        'on-demand': 'Bajo demanda'
+    };
+    return translations[frequency] || frequency;
+};
+
+window.translatePermission = function(permission) {
+    const translations = {
+        'public': 'Público',
+        'internal': 'Interno',
+        'confidential': 'Confidencial'
+    };
+    return translations[permission] || permission;
+};
+
+// Hacer las funciones disponibles globalmente
+if (!window.utils) {
+    window.utils = {};
+}
+window.utils.translateFrequency = window.translateFrequency;
+window.utils.translatePermission = window.translatePermission;
