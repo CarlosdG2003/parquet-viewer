@@ -395,59 +395,39 @@ class FileService:
         except Exception as e:
             raise Exception(f"Error executing query: {str(e)}")
 
-async def get_file_schema_with_display_names(self, filename: str) -> Dict[str, Any]:
-    """Obtiene esquema con nombres personalizados y metadatos adicionales"""
-    file_path = settings.PARQUET_DIR / filename
-    
-    if not file_path.exists():
-        raise FileNotFoundError(f"File {filename} not found")
-    
-    try:
-        # Obtener esquema técnico básico
-        parquet_file = ParquetFile(file_path)
-        basic_schema = parquet_file.get_schema()
+    async def get_file_schema_with_display_names(self, filename: str) -> Dict[str, Any]:
+        """Obtiene esquema con nombres personalizados y metadatos adicionales"""
+        file_path = settings.PARQUET_DIR / filename
         
-        # Obtener metadatos de columnas si existen
-        from services.admin_service import AdminService
-        admin_service = AdminService(self.metadata_service.db)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File {filename} not found")
         
         try:
-            display_schema = await admin_service.get_columns_display_schema(filename)
-            columns_mapping = {
-                col["original_name"]: col for col in display_schema.get("columns", [])
-            }
-            has_custom_names = display_schema.get("has_custom_names", False)
-        except:
-            columns_mapping = {}
-            has_custom_names = False
-        
-        # Enriquecer esquema con metadatos personalizados
-        enhanced_schema = []
-        for col_info in basic_schema:
-            original_name = col_info["name"]
-            custom_info = columns_mapping.get(original_name, {})
+            # Obtener esquema técnico básico
+            parquet_file = ParquetFile(file_path)
+            basic_schema = parquet_file.get_schema()
             
-            enhanced_col = {
-                "original_name": original_name,
-                "display_name": custom_info.get("display_name", original_name),
-                "description": custom_info.get("description", ""),
-                "type": col_info["type"],
-                "null_count": col_info.get("null_count", 0),
-                "unique_count": col_info.get("unique_count", 0),
-                "is_visible": custom_info.get("is_visible", True),
-                "has_custom_metadata": bool(custom_info)
-            }
-            
-            # Solo incluir columnas visibles
-            if enhanced_col["is_visible"]:
+            # Por ahora devolver esquema básico sin metadatos personalizados
+            enhanced_schema = []
+            for col_info in basic_schema:
+                enhanced_col = {
+                    "original_name": col_info["name"],
+                    "display_name": col_info["name"],  # Sin personalización por ahora
+                    "description": "",  # Sin descripción por ahora
+                    "type": col_info["type"],
+                    "null_count": col_info.get("null_count", 0),
+                    "unique_count": col_info.get("unique_count", 0),
+                    "is_visible": True,
+                    "has_custom_metadata": False
+                }
                 enhanced_schema.append(enhanced_col)
-        
-        return {
-            "filename": filename,
-            "has_custom_names": has_custom_names,
-            "schema": enhanced_schema,
-            "total_columns": len(enhanced_schema)
-        }
-        
-    except Exception as e:
-        raise Exception(f"Error getting enhanced schema: {str(e)}")
+            
+            return {
+                "filename": filename,
+                "has_custom_names": False,
+                "schema": enhanced_schema,
+                "total_columns": len(enhanced_schema)
+            }
+            
+        except Exception as e:
+            raise Exception(f"Error getting enhanced schema: {str(e)}")

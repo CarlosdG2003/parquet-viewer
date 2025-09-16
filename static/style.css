@@ -874,11 +874,11 @@ body {
 }
 
 .number-value.integer {
-    color: #0d6efd;
+    color: #495057;
 }
 
 .number-value.decimal {
-    color: #6f42c1;
+    color: #495057;
 }
 
 .date-value {

@@ -205,6 +205,7 @@ function collectColumnChanges() {
     return updates;
 }
 
+// Resto de funciones...
 async function syncFileColumns() {
     if (!currentFileName) return;
     
@@ -224,7 +225,6 @@ async function syncFileColumns() {
             'success'
         );
         
-        // Recargar columnas después de sincronizar
         await loadFileColumns();
         
     } catch (error) {
@@ -272,160 +272,20 @@ function resetColumn(originalName) {
     markUnsavedChanges();
 }
 
-async function previewWithCustomNames() {
-    if (!currentFileName) return;
-    
-    showLoadingSpinner();
-    
-    try {
-        const response = await fetch(`/admin/files/${currentFileName}/preview-with-custom-names?limit=20`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data = await response.json();
-        showPreviewModal(data);
-        
-    } catch (error) {
-        showNotification('Error generando preview: ' + error.message, 'error');
-    } finally {
-        hideLoadingSpinner();
-    }
-}
-
-function showPreviewModal(data) {
-    document.getElementById('previewModalTitle').textContent = `Vista Previa: ${data.filename}`;
-    
-    let content = `
-        <div class="preview-info">
-            <p><strong>Archivo:</strong> ${data.filename}</p>
-            <p><strong>Columnas visibles:</strong> ${data.total_visible_columns}</p>
-            <p><strong>Nombres personalizados:</strong> ${data.has_custom_names ? 'Sí' : 'No'}</p>
-            <p><strong>Filas mostradas:</strong> ${data.preview_rows}</p>
-        </div>
-    `;
-    
-    if (data.data.length > 0) {
-        content += '<div class="preview-table-container"><table class="preview-table"><thead><tr>';
-        
-        // Headers
-        data.columns.forEach(col => {
-            const title = col.description ? `title="${col.description}"` : '';
-            content += `<th ${title}>
-                ${col.display_name}
-                ${col.original_name !== col.display_name ? `<br><small>(${col.original_name})</small>` : ''}
-            </th>`;
-        });
-        content += '</tr></thead><tbody>';
-        
-        // Data rows
-        data.data.forEach(row => {
-            content += '<tr>';
-            data.columns.forEach(col => {
-                const value = row[col.display_name] || '';
-                content += `<td>${value}</td>`;
-            });
-            content += '</tr>';
-        });
-        content += '</tbody></table></div>';
-    } else {
-        content += '<p class="no-data">No hay datos para mostrar</p>';
-    }
-    
-    document.getElementById('previewContent').innerHTML = content;
-    document.getElementById('previewModal').classList.add('show');
-}
-
-function closePreviewModal() {
-    document.getElementById('previewModal').classList.remove('show');
-}
-
-async function exportColumnsConfig() {
-    if (!currentFileName) return;
-    
-    try {
-        const response = await fetch(`/admin/files/${currentFileName}/columns/export`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const config = await response.json();
-        
-        // Descargar como archivo JSON
-        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${currentFileName}_columns_config.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        showNotification('Configuración exportada exitosamente', 'success');
-        
-    } catch (error) {
-        showNotification('Error exportando configuración: ' + error.message, 'error');
-    }
-}
-
+// Funciones de modal y utilidades
 function showImportDialog() {
-    document.getElementById('importConfigModal').classList.add('show');
+    document.getElementById('importConfigModal').style.display = 'block';
 }
 
 function closeImportModal() {
-    document.getElementById('importConfigModal').classList.remove('show');
-    document.getElementById('configFile').value = '';
-    document.getElementById('configText').value = '';
+    document.getElementById('importConfigModal').style.display = 'none';
 }
 
-async function importConfiguration() {
-    let configData;
-    
-    const fileInput = document.getElementById('configFile');
-    const textInput = document.getElementById('configText').value.trim();
-    
-    try {
-        if (fileInput.files.length > 0) {
-            // Importar desde archivo
-            const file = fileInput.files[0];
-            const text = await file.text();
-            configData = JSON.parse(text);
-        } else if (textInput) {
-            // Importar desde texto
-            configData = JSON.parse(textInput);
-        } else {
-            showNotification('Selecciona un archivo o pega la configuración JSON', 'warning');
-            return;
-        }
-        
-        // Validar estructura básica
-        if (!configData.filename || !Array.isArray(configData.columns)) {
-            throw new Error('Estructura de configuración inválida');
-        }
-        
-        showLoadingSpinner();
-        
-        const response = await fetch(`/admin/files/${currentFileName}/columns/import`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(configData)
-        });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const result = await response.json();
-        
-        showNotification(
-            `Configuración importada: ${result.imported_columns} columnas procesadas`,
-            'success'
-        );
-        
-        closeImportModal();
-        await loadFileColumns();
-        
-    } catch (error) {
-        showNotification('Error importando configuración: ' + error.message, 'error');
-    } finally {
-        hideLoadingSpinner();
-    }
+function closePreviewModal() {
+    document.getElementById('previewModal').style.display = 'none';
 }
 
-// Funciones auxiliares (usar las existentes en admin.js)
+// Funciones auxiliares que deberían estar en admin.js
 function showLoadingSpinner() {
     document.getElementById('loadingSpinner').classList.remove('hidden');
 }
@@ -445,8 +305,4 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.classList.add('hidden');
     }, 5000);
-}
-
-function closeNotification() {
-    document.getElementById('notification').classList.add('hidden');
 }
