@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, DECIMAL, BIGINT, ForeignKey, ARRAY
+from sqlalchemy import Column, Boolean, Index, UniqueConstraint, Integer, String, Text, TIMESTAMP, DECIMAL, BIGINT, ForeignKey, ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from core.database import Base
@@ -112,3 +112,52 @@ class CombinedFileInfo(BaseModel):
     tags: List[str] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class ColumnMetadata(Base):
+    __tablename__ = "column_metadata"
+    
+    id = Column(Integer, primary_key=True)
+    filename = Column(String(255), nullable=False)
+    original_column_name = Column(String(255), nullable=False)
+    display_name = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    data_type = Column(String(100), nullable=True)
+    is_visible = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(TIMESTAMP, default=func.now())
+    updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
+    
+    # Índices y restricciones
+    __table_args__ = (
+        Index('ix_column_metadata_filename', 'filename'),
+        Index('ix_column_metadata_filename_column', 'filename', 'original_column_name'),
+        UniqueConstraint('filename', 'original_column_name', name='uq_filename_column')
+    )
+
+# Modelos Pydantic para la API
+class ColumnMetadataBase(BaseModel):
+    original_column_name: str
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    data_type: Optional[str] = None
+    is_visible: bool = True
+    sort_order: int = 0
+
+class ColumnMetadataCreate(ColumnMetadataBase):
+    filename: str
+
+class ColumnMetadataUpdate(BaseModel):
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    is_visible: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+class ColumnMetadataResponse(ColumnMetadataBase):
+    id: int
+    filename: str
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True

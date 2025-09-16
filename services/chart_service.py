@@ -13,7 +13,7 @@ class ChartService:
 
     def _convert_numpy_types(self, obj):
         """Convierte tipos numpy a tipos Python nativos para serialización JSON"""
-        if isinstance(obj, np.bool_):  # ← ESTA LÍNEA ERA LA QUE FALTABA
+        if isinstance(obj, np.bool_):  
             return bool(obj)
         elif isinstance(obj, (np.integer, np.signedinteger, np.unsignedinteger)):
             return int(obj)
@@ -21,13 +21,13 @@ class ChartService:
             return float(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, pd.Series):  # ← AGREGADA PARA MANEJAR PANDAS SERIES
+        elif isinstance(obj, pd.Series):  
             return obj.tolist()
         elif isinstance(obj, dict):
             return {key: self._convert_numpy_types(value) for key, value in obj.items()}
         elif isinstance(obj, list):
             return [self._convert_numpy_types(item) for item in obj]
-        elif pd.isna(obj):  # ← AGREGADA PARA MANEJAR VALORES NaN
+        elif pd.isna(obj):  
             return None
         else:
             return obj

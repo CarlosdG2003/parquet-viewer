@@ -26,12 +26,13 @@ class CatalogDetailPage {
     }
 
     /**
-     * Inicializa la tabla de datos
+     * Inicializa la tabla de datos con funcionalidades mejoradas
      */
     _initializeDataTable() {
         this.dataTable = new DataTable('#dataTableContainer', {
-            onPageChange: (page) => this._loadCatalogData(page),
-            onColumnSelect: (columns) => this._handleColumnSelection(columns)
+            onPageChange: (page, filters) => this._loadCatalogData(page, filters),
+            onColumnSelect: (columns) => this._handleColumnSelection(columns),
+            onDataChange: (filters) => this._loadCatalogDataWithFilters(filters)
         });
     }
 
@@ -240,87 +241,147 @@ class CatalogDetailPage {
     }
 
     /**
-     * Carga los datos del catálogo
+     * Carga los datos del catálogo con filtros y paginación mejorada
      */
-    async _loadCatalogData(page = 1) {
+    async _loadCatalogData(page = 1, additionalFilters = {}) {
         if (!this.currentCatalog) return;
 
         try {
-            this.dataTable.showLoading();
+            this.dataTable.showLoading('Cargando datos...');
 
-            const options = {
+            // Combinar filtros
+            const filters = {
                 page: page,
-                pageSize: 50,
-                columns: this.selectedColumns.length > 0 ? this.selectedColumns : null
+                page_size: 50,
+                columns: this.selectedColumns.length > 0 ? this.selectedColumns.join(',') : null,
+                search: additionalFilters.search || '',
+                sort_column: additionalFilters.sortColumn || null,
+                sort_order: additionalFilters.sortOrder || 'asc',
+                ...additionalFilters
             };
 
-            const result = await apiClient.getFileData(this.currentCatalog.name, options);
+            // Usar el endpoint mejorado
+            const result = await apiClient.getFileDataEnhanced(this.currentCatalog.name, filters);
             
             this.dataTable.render(result);
-            this._updateRecordsInfo(result.pagination);
+            this._updateRecordsInfo(result.pagination, result);
 
         } catch (error) {
+            console.error('Error loading catalog data:', error);
             this.dataTable.showError('Error al cargar datos: ' + error.message);
         }
     }
 
     /**
-     * Carga el esquema del catálogo
+     * Maneja cambios de datos (filtros, búsqueda, ordenamiento)
+     */
+    async _loadCatalogDataWithFilters(filters) {
+        await this._loadCatalogData(filters.page || 1, filters);
+    }
+
+    /**
+     * Carga el esquema del catálogo con metadatos mejorados
      */
     async _loadSchema() {
         try {
             DOM.showLoading('#schemaContent', 'Cargando esquema...');
             
-            const result = await apiClient.getFileSchema(this.currentCatalog.name);
-            this._renderSchema(result.schema);
+            // Usar el endpoint mejorado de esquema
+            const result = await apiClient.getFileSchemaEnhanced(this.currentCatalog.name);
+            this._renderEnhancedSchema(result);
 
         } catch (error) {
+            console.error('Error loading schema:', error);
             DOM.showError('#schemaContent', 'Error al cargar esquema: ' + error.message);
         }
     }
 
     /**
-     * Renderiza el esquema - MANTIENE LA VERSIÓN ORIGINAL QUE FUNCIONA
+     * Renderiza el esquema mejorado con metadatos personalizados
      */
-    _renderSchema(schema) {
+    _renderEnhancedSchema(schemaResult) {
         const schemaContent = DOM.$('#schemaContent');
         if (!schemaContent) return;
 
+        const { schema, has_custom_names, total_columns } = schemaResult;
+
         const tableHTML = `
-            <table class="schema-table">
+            <div class="schema-header">
+                <h4>Esquema de Datos</h4>
+                <div class="schema-info">
+                    <span class="schema-stat">Columnas: <strong>${total_columns}</strong></span>
+                    ${has_custom_names ? '<span class="custom-names-badge">Nombres Personalizados</span>' : ''}
+                </div>
+            </div>
+            
+            <table class="schema-table enhanced">
                 <thead>
                     <tr>
                         <th>Columna</th>
+                        ${has_custom_names ? '<th>Nombre Original</th>' : ''}
                         <th>Tipo</th>
+                        <th>Descripción</th>
                         <th>Valores Nulos</th>
                         <th>Valores Únicos</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${schema.map(col => `
-                        <tr>
-                            <td><strong>${DOM.escapeHtml(col.name)}</strong></td>
-                            <td>${DOM.escapeHtml(col.type)}</td>
-                            <td>${DOM.formatNumber(col.null_count)}</td>
-                            <td>${DOM.formatNumber(col.unique_count)}</td>
+                        <tr class="schema-row ${col.has_custom_metadata ? 'customized' : ''}">
+                            <td class="column-name">
+                                <strong>${DOM.escapeHtml(col.display_name)}</strong>
+                                ${col.has_custom_metadata ? '<span class="custom-indicator">★</span>' : ''}
+                            </td>
+                            ${has_custom_names ? `
+                                <td class="original-name">
+                                    <code>${DOM.escapeHtml(col.original_name)}</code>
+                                </td>
+                            ` : ''}
+                            <td class="column-type">
+                                <span class="type-badge">${DOM.escapeHtml(col.type)}</span>
+                            </td>
+                            <td class="column-description">
+                                ${col.description ? 
+                                    `<span class="description-text">${DOM.escapeHtml(col.description)}</span>` : 
+                                    '<span class="no-description">Sin descripción</span>'
+                                }
+                            </td>
+                            <td class="stat-value">${DOM.formatNumber(col.null_count)}</td>
+                            <td class="stat-value">${DOM.formatNumber(col.unique_count)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
+            
+            ${has_custom_names ? `
+                <div class="schema-footer">
+                    <p class="schema-note">
+                        <span class="custom-indicator">★</span> Columnas con metadatos personalizados
+                    </p>
+                </div>
+            ` : ''}
         `;
 
         schemaContent.innerHTML = tableHTML;
     }
 
     /**
-     * Configura el selector de columnas
+     * Configuración mejorada del selector de columnas
      */
     _setupColumnsSelector() {
         const columnsList = DOM.$('#columnsList');
-        if (columnsList) {
+        if (columnsList && this.availableColumns.length > 0) {
             columnsList.innerHTML = this.availableColumns.map(col => 
-                `<option value="${DOM.escapeHtml(col)}">${DOM.escapeHtml(col)}</option>`
+                `<option value="${DOM.escapeHtml(col)}" title="${DOM.escapeHtml(col)}">${DOM.escapeHtml(col)}</option>`
             ).join('');
+            
+            // Agregar información sobre nombres personalizados si los hay
+            if (this.catalogInfo && this.catalogInfo.has_custom_names) {
+                const info = document.createElement('div');
+                info.className = 'columns-info';
+                info.innerHTML = '<small>★ Algunas columnas tienen nombres personalizados</small>';
+                columnsList.parentElement.insertBefore(info, columnsList);
+            }
         }
     }
 
@@ -346,21 +407,59 @@ class CatalogDetailPage {
     }
 
     /**
-     * Maneja la exportación
+     * Maneja la exportación con filtros aplicados
      */
     _handleExport() {
         const exportData = this.dataTable.exportData('csv');
-        console.log('Export data:', exportData);
-        // Implementar lógica de exportación
+        const filters = this.dataTable.getCurrentFilters();
+        
+        console.log('Exporting with filters:', {
+            ...exportData,
+            appliedFilters: filters
+        });
+        
+        // Aquí puedes implementar la lógica de exportación real
+        // Por ejemplo, hacer una llamada al backend para generar el archivo
+        this._showExportDialog(exportData);
     }
 
     /**
-     * Actualiza la información de registros
+     * Muestra diálogo de exportación
      */
-    _updateRecordsInfo(pagination) {
+    _showExportDialog(exportData) {
+        const message = `
+            Exportando ${exportData.totalRows} registros
+            ${exportData.filters.search ? `\nBúsqueda: "${exportData.filters.search}"` : ''}
+            ${exportData.filters.sortColumn ? `\nOrdenado por: ${exportData.filters.sortColumn} (${exportData.filters.sortOrder})` : ''}
+        `;
+        
+        if (confirm(message + '\n\n¿Continuar con la exportación?')) {
+            // Implementar exportación real aquí
+            alert('Función de exportación pendiente de implementación');
+        }
+    }
+
+    /**
+     * Actualiza la información de registros con datos mejorados
+     */
+    _updateRecordsInfo(pagination, result) {
         const recordsInfo = DOM.$('#recordsInfo');
         if (recordsInfo) {
-            recordsInfo.textContent = `${DOM.formatNumber(pagination.total)} registros`;
+            const { search_applied, sort_applied, has_custom_names } = result;
+            
+            let infoText = `${DOM.formatNumber(pagination.total_rows)} registros`;
+            
+            const badges = [];
+            if (search_applied) badges.push('<span class="info-badge search">Filtrado</span>');
+            if (sort_applied) badges.push('<span class="info-badge sort">Ordenado</span>');
+            if (has_custom_names) badges.push('<span class="info-badge custom">Nombres Personalizados</span>');
+            
+            recordsInfo.innerHTML = `
+                <div class="records-info-enhanced">
+                    <span class="records-count">${infoText}</span>
+                    <div class="records-badges">${badges.join('')}</div>
+                </div>
+            `;
         }
     }
 

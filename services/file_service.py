@@ -6,6 +6,8 @@ from models.parquet_file import ParquetFile
 from models.database_models import CombinedFileInfo, FileMetadata
 from services.metadata_service import MetadataService
 from config import settings
+import pandas as pd
+import numpy as np
 
 class FileService:
     """Servicio que integra datos técnicos (DuckDB) con metadatos (PostgreSQL)"""
@@ -246,3 +248,206 @@ class FileService:
             results[filename] = success
         
         return results
+    
+    async def get_file_data_with_display_names(
+        self, 
+        filename: str, 
+        page: int = 1, 
+        page_size: int = 50,
+        columns: List[str] = None,
+        search_term: str = None,
+        sort_column: str = None,
+        sort_order: str = "asc"
+    ) -> Dict[str, Any]:
+        file_path = settings.PARQUET_DIR / filename
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"File {filename} not found")
+        
+        try:
+            # Obtener metadatos de columnas si existen
+            from services.admin_service import AdminService
+            admin_service = AdminService(self.metadata_service.db)
+            
+            try:
+                display_schema = await admin_service.get_columns_display_schema(filename)
+                has_custom_names = display_schema.get("has_custom_names", False)
+                columns_mapping = {
+                    col["original_name"]: col for col in display_schema.get("columns", [])
+                }
+            except:
+                # Si no hay metadatos de columnas, usar esquema original
+                has_custom_names = False
+                columns_mapping = {}
+            
+            # Construir query base
+            offset = (page - 1) * page_size
+            
+            # Determinar columnas a seleccionar
+            if columns and has_custom_names:
+                # Mapear nombres de visualización a nombres originales
+                original_columns = []
+                display_columns = []
+                for col in columns:
+                    found = False
+                    for orig_name, col_info in columns_mapping.items():
+                        if col_info["display_name"] == col:
+                            original_columns.append(f'"{orig_name}"')
+                            display_columns.append(col)
+                            found = True
+                            break
+                    if not found:
+                        original_columns.append(f'"{col}"')
+                        display_columns.append(col)
+                
+                columns_str = ", ".join(original_columns)
+            else:
+                # Si no hay columnas específicas, obtener todas las visibles
+                if has_custom_names:
+                    visible_cols = [
+                        f'"{col_info["original_name"]}" AS "{col_info["display_name"]}"'
+                        for col_info in columns_mapping.values()
+                    ]
+                    columns_str = ", ".join(visible_cols) if visible_cols else "*"
+                    display_columns = [col_info["display_name"] for col_info in columns_mapping.values()]
+                else:
+                    columns_str = "*"
+                    display_columns = None
+            
+            # Query base
+            base_query = f'SELECT {columns_str} FROM parquet_scan("{file_path}")'
+            
+            # Agregar filtro de búsqueda
+            where_clause = ""
+            if search_term:
+                search_conditions = []
+                # Obtener todas las columnas para búsqueda
+                schema_query = f'DESCRIBE SELECT * FROM parquet_scan("{file_path}")'
+                schema_df = self.duckdb_conn.execute(schema_query).fetchdf()
+                
+                for _, row in schema_df.iterrows():
+                    col_name = row['column_name']
+                    col_type = row['column_type'].lower()
+                    
+                    # Solo buscar en columnas de texto y convertir números a string
+                    if 'varchar' in col_type or 'string' in col_type:
+                        search_conditions.append(f'LOWER(CAST("{col_name}" AS VARCHAR)) LIKE LOWER(\'%{search_term}%\')')
+                    elif any(t in col_type for t in ['int', 'float', 'double', 'decimal']):
+                        search_conditions.append(f'CAST("{col_name}" AS VARCHAR) LIKE \'%{search_term}%\'')
+                
+                if search_conditions:
+                    where_clause = f" WHERE ({' OR '.join(search_conditions)})"
+            
+            # Agregar ordenamiento
+            order_clause = ""
+            if sort_column and sort_order:
+                # Si hay nombres personalizados, usar el nombre original
+                actual_sort_column = sort_column
+                if has_custom_names:
+                    for orig_name, col_info in columns_mapping.items():
+                        if col_info["display_name"] == sort_column:
+                            actual_sort_column = orig_name
+                            break
+                
+                order_clause = f' ORDER BY "{actual_sort_column}" {sort_order.upper()}'
+            
+            # Query con paginación
+            data_query = f'{base_query}{where_clause}{order_clause} LIMIT {page_size} OFFSET {offset}'
+            df = self.duckdb_conn.execute(data_query).fetchdf()
+            
+            # Query para contar total de registros (con filtros)
+            count_query = f'SELECT COUNT(*) as total FROM parquet_scan("{file_path}"){where_clause}'
+            total_rows = self.duckdb_conn.execute(count_query).fetchone()[0]
+            
+            # Convertir DataFrame a formato JSON serializable
+            data_records = []
+            for _, row in df.iterrows():
+                record = {}
+                for col in df.columns:
+                    value = row[col]
+                    # Manejar valores especiales
+                    if pd.isna(value):
+                        record[col] = None
+                    elif isinstance(value, (pd.Timestamp)):
+                        record[col] = value.isoformat()
+                    elif isinstance(value, (np.integer, np.floating)):
+                        record[col] = value.item()
+                    elif isinstance(value, np.bool_):
+                        record[col] = bool(value)
+                    else:
+                        record[col] = value
+                data_records.append(record)
+            
+            return {
+                "data": data_records,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_rows": int(total_rows),
+                    "total_pages": (int(total_rows) + page_size - 1) // page_size
+                },
+                "columns": display_columns or list(df.columns),
+                "has_custom_names": has_custom_names,
+                "search_applied": bool(search_term),
+                "sort_applied": bool(sort_column)
+            }
+            
+        except Exception as e:
+            raise Exception(f"Error executing query: {str(e)}")
+
+async def get_file_schema_with_display_names(self, filename: str) -> Dict[str, Any]:
+    """Obtiene esquema con nombres personalizados y metadatos adicionales"""
+    file_path = settings.PARQUET_DIR / filename
+    
+    if not file_path.exists():
+        raise FileNotFoundError(f"File {filename} not found")
+    
+    try:
+        # Obtener esquema técnico básico
+        parquet_file = ParquetFile(file_path)
+        basic_schema = parquet_file.get_schema()
+        
+        # Obtener metadatos de columnas si existen
+        from services.admin_service import AdminService
+        admin_service = AdminService(self.metadata_service.db)
+        
+        try:
+            display_schema = await admin_service.get_columns_display_schema(filename)
+            columns_mapping = {
+                col["original_name"]: col for col in display_schema.get("columns", [])
+            }
+            has_custom_names = display_schema.get("has_custom_names", False)
+        except:
+            columns_mapping = {}
+            has_custom_names = False
+        
+        # Enriquecer esquema con metadatos personalizados
+        enhanced_schema = []
+        for col_info in basic_schema:
+            original_name = col_info["name"]
+            custom_info = columns_mapping.get(original_name, {})
+            
+            enhanced_col = {
+                "original_name": original_name,
+                "display_name": custom_info.get("display_name", original_name),
+                "description": custom_info.get("description", ""),
+                "type": col_info["type"],
+                "null_count": col_info.get("null_count", 0),
+                "unique_count": col_info.get("unique_count", 0),
+                "is_visible": custom_info.get("is_visible", True),
+                "has_custom_metadata": bool(custom_info)
+            }
+            
+            # Solo incluir columnas visibles
+            if enhanced_col["is_visible"]:
+                enhanced_schema.append(enhanced_col)
+        
+        return {
+            "filename": filename,
+            "has_custom_names": has_custom_names,
+            "schema": enhanced_schema,
+            "total_columns": len(enhanced_schema)
+        }
+        
+    except Exception as e:
+        raise Exception(f"Error getting enhanced schema: {str(e)}")

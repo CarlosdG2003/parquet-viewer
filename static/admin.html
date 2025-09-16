@@ -21,6 +21,7 @@
             <button class="nav-btn active" onclick="showSection('dashboard')">Dashboard</button>
             <button class="nav-btn" onclick="showSection('metadata')">Gestionar Metadatos</button>
             <button class="nav-btn" onclick="showSection('files')">Archivos sin Metadatos</button>
+            <button class="nav-btn" onclick="showSection('columns')">Gestión de Columnas</button>
         </nav>
 
         <!-- Dashboard Section -->
@@ -93,6 +94,67 @@
             </div>
             <div id="filesWithoutMetadataList" class="files-grid"></div>
         </section>
+
+        <!-- NEW: Columns Management Section -->
+        <section id="columnsSection" class="admin-section hidden">
+            <div class="section-header">
+                <h2>Gestión de Columnas</h2>
+                <div class="section-actions">
+                    <select id="fileSelectForColumns" class="file-select">
+                        <option value="">Seleccionar archivo...</option>
+                    </select>
+                    <button onclick="loadFileColumns()" class="btn-primary">Cargar Columnas</button>
+                </div>
+            </div>
+
+            <!-- File info panel -->
+            <div id="fileColumnsInfo" class="file-info-panel hidden">
+                <div class="info-header">
+                    <h3 id="currentFileName">-</h3>
+                    <div class="info-actions">
+                        <button onclick="syncFileColumns()" class="btn-secondary">Sincronizar</button>
+                        <button onclick="previewWithCustomNames()" class="btn-secondary">Vista Previa</button>
+                        <button onclick="exportColumnsConfig()" class="btn-secondary">Exportar Config</button>
+                        <button onclick="showImportDialog()" class="btn-secondary">Importar Config</button>
+                    </div>
+                </div>
+                
+                <div class="columns-stats">
+                    <span>Total: <strong id="totalColumnsCount">0</strong></span>
+                    <span>Visibles: <strong id="visibleColumnsCount">0</strong></span>
+                    <span>Personalizadas: <strong id="customizedColumnsCount">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Columns toolbar -->
+            <div id="columnsToolbar" class="columns-toolbar hidden">
+                <div class="toolbar-left">
+                    <button onclick="showAllColumns()" class="btn-small">Mostrar Todas</button>
+                    <button onclick="hideAllColumns()" class="btn-small">Ocultar Todas</button>
+                    <button onclick="resetAllColumnNames()" class="btn-small btn-warning">Resetear Nombres</button>
+                </div>
+                <div class="toolbar-right">
+                    <span id="unsavedChangesIndicator" class="unsaved-indicator hidden">• Cambios sin guardar</span>
+                    <button onclick="saveAllColumnChanges()" class="btn-primary" id="saveColumnsBtn" disabled>Guardar Cambios</button>
+                </div>
+            </div>
+
+            <!-- Columns list -->
+            <div id="columnsList" class="columns-list hidden">
+                <div class="columns-header">
+                    <div class="col-order">#</div>
+                    <div class="col-visible">Visible</div>
+                    <div class="col-original">Nombre Original</div>
+                    <div class="col-display">Nombre Personalizado</div>
+                    <div class="col-description">Descripción</div>
+                    <div class="col-type">Tipo</div>
+                    <div class="col-actions">Acciones</div>
+                </div>
+                <div id="columnsContainer" class="columns-container">
+                    <!-- Las columnas se cargarán aquí dinámicamente -->
+                </div>
+            </div>
+        </section>
     </div>
 
     <!-- Modal para crear/editar metadatos -->
@@ -164,6 +226,47 @@
         </div>
     </div>
 
+    <!-- NEW: Import Config Modal -->
+    <div id="importConfigModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Importar Configuración de Columnas</h3>
+                <span class="close" onclick="closeImportModal()">&times;</span>
+            </div>
+            
+            <div class="import-form">
+                <div class="form-group">
+                    <label for="configFile">Archivo de Configuración (JSON)</label>
+                    <input type="file" id="configFile" accept=".json">
+                </div>
+                
+                <div class="form-group">
+                    <label for="configText">O pegar configuración JSON</label>
+                    <textarea id="configText" rows="10" placeholder='{"filename": "archivo.parquet", "columns": [...]}'></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeImportModal()" class="btn-secondary">Cancelar</button>
+                    <button onclick="importConfiguration()" class="btn-primary">Importar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Preview Modal -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="previewModalTitle">Vista Previa con Nombres Personalizados</h3>
+                <span class="close" onclick="closePreviewModal()">&times;</span>
+            </div>
+            
+            <div id="previewContent" class="preview-content">
+                <!-- Preview table will be loaded here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Loading spinner -->
     <div id="loadingSpinner" class="loading-spinner hidden">
         <div class="spinner"></div>
@@ -177,5 +280,6 @@
     </div>
 
     <script src="/static/js/admin.js"></script>
+    <script src="/static/js/admin-columns.js"></script>
 </body>
 </html>

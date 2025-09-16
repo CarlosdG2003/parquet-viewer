@@ -141,7 +141,7 @@ class ApiClient {
     }
 
     /**
-     * Obtiene datos paginados de un archivo
+     * Obtiene datos paginados de un archivo (versión básica)
      */
     async getFileData(filename, options = {}) {
         const {
@@ -160,10 +160,50 @@ class ApiClient {
     }
 
     /**
-     * Obtiene el esquema de un archivo
+     * Obtiene datos paginados de un archivo con funcionalidades mejoradas
+     */
+    async getFileDataEnhanced(filename, options = {}) {
+        const {
+            page = 1,
+            page_size = 50,
+            columns = null,
+            search = '',
+            sort_column = null,
+            sort_order = 'asc'
+        } = options;
+
+        const params = new URLSearchParams();
+        params.append('page', page);
+        params.append('page_size', page_size);
+        
+        if (columns) {
+            params.append('columns', columns);
+        }
+        
+        if (search && search.trim()) {
+            params.append('search', search.trim());
+        }
+        
+        if (sort_column) {
+            params.append('sort_column', sort_column);
+            params.append('sort_order', sort_order);
+        }
+
+        return this.request(`/files/${filename}/data/enhanced?${params.toString()}`);
+    }
+
+    /**
+     * Obtiene el esquema de un archivo (versión básica)
      */
     async getFileSchema(filename) {
         return this.request(`/files/${filename}/schema`);
+    }
+
+    /**
+     * Obtiene el esquema de un archivo con metadatos mejorados
+     */
+    async getFileSchemaEnhanced(filename) {
+        return this.request(`/files/${filename}/schema/enhanced`);
     }
 
     /**
@@ -188,6 +228,166 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify(chartConfig)
         });
+    }
+
+    // === NUEVOS MÉTODOS PARA ADMINISTRACIÓN DE COLUMNAS ===
+
+    /**
+     * Obtiene metadatos de columnas para administración (requiere autenticación de admin)
+     */
+    async getFileColumnsAdmin(filename) {
+        return this.request(`/admin/files/${filename}/columns`);
+    }
+
+    /**
+     * Actualiza metadatos de una columna específica
+     */
+    async updateColumnMetadata(filename, columnName, updates) {
+        return this.request(`/admin/files/${filename}/columns/${columnName}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates)
+        });
+    }
+
+    /**
+     * Actualiza metadatos de múltiples columnas
+     */
+    async bulkUpdateColumnsMetadata(filename, columnsUpdates) {
+        return this.request(`/admin/files/${filename}/columns/bulk-update`, {
+            method: 'POST',
+            body: JSON.stringify(columnsUpdates)
+        });
+    }
+
+    /**
+     * Sincroniza metadatos de columnas con el esquema del archivo
+     */
+    async syncFileColumnsMetadata(filename) {
+        return this.request(`/admin/files/${filename}/columns/sync`, {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Obtiene esquema de visualización con nombres personalizados
+     */
+    async getColumnsDisplaySchema(filename) {
+        return this.request(`/admin/files/${filename}/columns/display-schema`);
+    }
+
+    /**
+     * Resetea metadatos de una columna
+     */
+    async resetColumnMetadata(filename, columnName) {
+        return this.request(`/admin/files/${filename}/columns/${columnName}/reset`, {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Exporta configuración de columnas
+     */
+    async exportColumnsConfig(filename) {
+        return this.request(`/admin/files/${filename}/columns/export`);
+    }
+
+    /**
+     * Importa configuración de columnas
+     */
+    async importColumnsConfig(filename, configData) {
+        return this.request(`/admin/files/${filename}/columns/import`, {
+            method: 'POST',
+            body: JSON.stringify(configData)
+        });
+    }
+
+    /**
+     * Vista previa con nombres personalizados
+     */
+    async previewFileWithCustomNames(filename, limit = 20) {
+        return this.request(`/admin/files/${filename}/preview-with-custom-names?limit=${limit}`);
+    }
+
+    // === MÉTODOS DE ADMINISTRACIÓN GENERAL ===
+
+    /**
+     * Obtiene estadísticas del dashboard de admin
+     */
+    async getAdminDashboardStats() {
+        return this.request('/admin/dashboard');
+    }
+
+    /**
+     * Obtiene archivos sin metadatos
+     */
+    async getFilesWithoutMetadata() {
+        return this.request('/admin/files-without-metadata');
+    }
+
+    /**
+     * Obtiene resumen de metadatos para admin
+     */
+    async getMetadataSummaryForAdmin(filters = {}) {
+        const params = new URLSearchParams();
+        
+        if (filters.search) params.append('search', filters.search);
+        if (filters.responsible) params.append('responsible', filters.responsible);
+        if (filters.permissions) params.append('permissions', filters.permissions);
+        
+        const queryString = params.toString();
+        const endpoint = `/admin/metadata${queryString ? '?' + queryString : ''}`;
+        
+        return this.request(endpoint);
+    }
+
+    /**
+     * Obtiene opciones para filtros de admin
+     */
+    async getAdminFilterOptions() {
+        return this.request('/admin/filter-options');
+    }
+
+    /**
+     * Obtiene información detallada de archivo para admin
+     */
+    async getFileMetadataForAdmin(filename) {
+        return this.request(`/admin/metadata/${filename}`);
+    }
+
+    /**
+     * Crea metadatos como admin
+     */
+    async createMetadataAsAdmin(metadata) {
+        return this.request('/admin/metadata', {
+            method: 'POST',
+            body: JSON.stringify(metadata)
+        });
+    }
+
+    /**
+     * Actualiza metadatos como admin
+     */
+    async updateMetadataAsAdmin(filename, metadata) {
+        return this.request(`/admin/metadata/${filename}`, {
+            method: 'PUT',
+            body: JSON.stringify(metadata)
+        });
+    }
+
+    /**
+     * Elimina metadatos como admin
+     */
+    async deleteMetadataAsAdmin(filename) {
+        return this.request(`/admin/metadata/${filename}`, {
+            method: 'DELETE'
+        });
+    }
+
+    /**
+     * Obtiene información del usuario admin actual
+     */
+    async getCurrentAdminUser() {
+        return this.request('/admin/user-info');
     }
 }
 

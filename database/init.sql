@@ -51,6 +51,21 @@ CREATE TABLE IF NOT EXISTS metadata_history (
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de metadatos de columnas
+CREATE TABLE IF NOT EXISTS column_metadata (
+    id SERIAL PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,
+    original_column_name VARCHAR(255) NOT NULL,
+    display_name VARCHAR(255),
+    description TEXT,
+    data_type VARCHAR(100),
+    is_visible BOOLEAN DEFAULT true,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_filename_column UNIQUE (filename, original_column_name)
+);
+
 -- Índices para mejorar rendimiento
 CREATE INDEX IF NOT EXISTS idx_file_metadata_filename ON file_metadata(filename);
 CREATE INDEX IF NOT EXISTS idx_file_metadata_responsible ON file_metadata(responsible);
@@ -60,6 +75,9 @@ CREATE INDEX IF NOT EXISTS idx_file_metadata_updated_at ON file_metadata(updated
 
 CREATE INDEX IF NOT EXISTS idx_metadata_history_file_id ON metadata_history(file_id);
 CREATE INDEX IF NOT EXISTS idx_metadata_history_changed_at ON metadata_history(changed_at);
+
+CREATE INDEX IF NOT EXISTS ix_column_metadata_filename ON column_metadata(filename);
+CREATE INDEX IF NOT EXISTS ix_column_metadata_filename_column ON column_metadata(filename, original_column_name);
 
 -- Función para actualizar automáticamente updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -74,6 +92,12 @@ $$ language 'plpgsql';
 DROP TRIGGER IF EXISTS update_file_metadata_updated_at ON file_metadata;
 CREATE TRIGGER update_file_metadata_updated_at 
     BEFORE UPDATE ON file_metadata 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_column_metadata_updated_at ON column_metadata;
+CREATE TRIGGER update_column_metadata_updated_at 
+    BEFORE UPDATE ON column_metadata 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 

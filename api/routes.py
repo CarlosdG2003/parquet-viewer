@@ -280,3 +280,45 @@ async def generate_custom_chart(
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando gráfica: {str(e)}")
+    
+@router.get("/files/{filename}/data/enhanced")
+async def get_file_data_enhanced(
+    filename: str,
+    page: int = Query(1, ge=1, description="Página"),
+    page_size: int = Query(50, ge=1, le=200, description="Tamaño de página"),
+    columns: Optional[str] = Query(None, description="Columnas separadas por comas"),
+    search: Optional[str] = Query(None, description="Término de búsqueda"),
+    sort_column: Optional[str] = Query(None, description="Columna para ordenar"),
+    sort_order: Optional[str] = Query("asc", description="Orden: asc o desc"),
+    file_service: FileService = Depends(get_file_service)
+):
+    """Obtiene datos del archivo con funcionalidades mejoradas"""
+    try:
+        column_list = [col.strip() for col in columns.split(",")] if columns else None
+        
+        return await file_service.get_file_data_with_display_names(
+            filename=filename, 
+            page=page, 
+            page_size=page_size, 
+            columns=column_list,
+            search_term=search,
+            sort_column=sort_column,
+            sort_order=sort_order
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener datos: {str(e)}")
+
+@router.get("/files/{filename}/schema/enhanced")
+async def get_file_schema_enhanced(
+    filename: str,
+    file_service: FileService = Depends(get_file_service)
+):
+    """Obtiene esquema del archivo con metadatos personalizados"""
+    try:
+        return await file_service.get_file_schema_with_display_names(filename)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener esquema: {str(e)}")
