@@ -40,7 +40,7 @@ async def get_authenticated_metadata_service(
 @admin_router.get("/", response_class=HTMLResponse)
 async def admin_dashboard_page(admin_user: str = Depends(verify_admin_credentials)):
     """Página principal del panel de administrador"""
-    with open("static/admin.html", "r", encoding="utf-8") as file:
+    with open("templates/admin.html", "r", encoding="utf-8") as file:
         return HTMLResponse(content=file.read())
 
 @admin_router.get("/dashboard")

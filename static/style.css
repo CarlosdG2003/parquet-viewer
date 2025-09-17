@@ -1237,3 +1237,170 @@ body {
         padding: 8px 4px;
     }
 }
+
+/* Estilos para controles de tabla */
+.table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.btn-reset-sort {
+    padding: 8px 16px;
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #495057;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-reset-sort:hover:not(:disabled) {
+    background: #e9ecef;
+    border-color: #adb5bd;
+    color: #212529;
+}
+
+.btn-reset-sort:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+.sort-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sort-count {
+    color: #0066cc;
+    font-weight: 600;
+}
+
+.sort-hint {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 12px;
+}
+
+/* Estilos para headers de columnas */
+.column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.column-name {
+    flex: 1;
+    text-align: left;
+}
+
+.sort-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.sort-priority {
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    min-width: 18px;
+}
+
+.sort-indicator {
+    font-size: 14px;
+    font-weight: bold;
+    color: #6c757d;
+    transition: color 0.2s ease;
+}
+
+/* Estados de ordenamiento */
+.sortable-column {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    user-select: none;
+}
+
+.sortable-column:hover {
+    background-color: #f8f9fa;
+}
+
+.sortable-column.sorted-asc .sort-indicator {
+    color: #28a745;
+}
+
+.sortable-column.sorted-desc .sort-indicator {
+    color: #dc3545;
+}
+
+.sortable-column.sorted-asc {
+    background-color: #d4edda;
+}
+
+.sortable-column.sorted-desc {
+    background-color: #f8d7da;
+}
+
+/* Badges y etiquetas */
+.filter-badge,
+.sort-badge {
+    background: #007bff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sort-badge {
+    background: #28a745;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .table-controls {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .sort-info {
+        text-align: center;
+        justify-content: center;
+    }
+    
+    .sort-hint {
+        display: none;
+    }
+    
+    .sort-priority {
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+    }
+}

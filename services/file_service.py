@@ -407,24 +407,47 @@ class FileService:
             parquet_file = ParquetFile(file_path)
             basic_schema = parquet_file.get_schema()
             
-            # Por ahora devolver esquema básico sin metadatos personalizados
+            # Obtener metadatos de columnas usando la misma sesión
+            from models.database_models import ColumnMetadata
+            from sqlalchemy import select
+            
+            query = select(ColumnMetadata).where(
+                ColumnMetadata.filename == filename,
+                ColumnMetadata.is_visible == True
+            ).order_by(ColumnMetadata.sort_order, ColumnMetadata.original_column_name)
+            
+            result = await self.metadata_service.db.execute(query)
+            metadata_list = result.scalars().all()
+            
+            # Crear mapeo de metadatos
+            columns_mapping = {
+                meta.original_column_name: meta for meta in metadata_list
+            }
+            
+            has_custom_names = len(metadata_list) > 0
+            
+            # Enriquecer esquema con metadatos personalizados
             enhanced_schema = []
             for col_info in basic_schema:
+                original_name = col_info["name"]
+                custom_info = columns_mapping.get(original_name)
+                
                 enhanced_col = {
-                    "original_name": col_info["name"],
-                    "display_name": col_info["name"],  # Sin personalización por ahora
-                    "description": "",  # Sin descripción por ahora
+                    "original_name": original_name,
+                    "display_name": custom_info.display_name if custom_info else original_name,
+                    "description": custom_info.description if custom_info else "",
                     "type": col_info["type"],
                     "null_count": col_info.get("null_count", 0),
                     "unique_count": col_info.get("unique_count", 0),
-                    "is_visible": True,
-                    "has_custom_metadata": False
+                    "is_visible": custom_info.is_visible if custom_info else True,
+                    "has_custom_metadata": custom_info is not None
                 }
+                
                 enhanced_schema.append(enhanced_col)
             
             return {
                 "filename": filename,
-                "has_custom_names": False,
+                "has_custom_names": has_custom_names,
                 "schema": enhanced_schema,
                 "total_columns": len(enhanced_schema)
             }

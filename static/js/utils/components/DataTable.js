@@ -17,8 +17,15 @@ class DataTable {
         this.columns = [];
         this.data = [];
         this.searchTerm = '';
+        
+        // NUEVO: Sistema de ordenamiento múltiple
+        this.sortColumns = []; // Array de objetos {column: 'name', order: 'asc'}
+        this.maxSortColumns = 3; // Máximo 3 columnas ordenadas
+        
+        // Mantener compatibilidad con el sistema anterior
         this.sortColumn = null;
         this.sortOrder = 'asc';
+        
         this.hasCustomNames = false;
         
         this._initializeFilters();
@@ -72,10 +79,22 @@ class DataTable {
     }
 
     /**
-     * Renderiza la tabla de datos con controles de ordenamiento
+     * Renderiza la tabla de datos con controles de ordenamiento múltiple
      */
     _renderTable() {
         const tableHTML = `
+            <div class="table-controls">
+                <button class="btn-reset-sort" ${this.sortColumns.length === 0 ? 'disabled' : ''} 
+                        title="Limpiar todos los filtros">
+                     Limpiar filtros
+                </button>
+                <div class="sort-info">
+                    ${this.sortColumns.length > 0 ? 
+                        `<span class="sort-count">${this.sortColumns.length} columna${this.sortColumns.length > 1 ? 's' : ''} ordenada${this.sortColumns.length > 1 ? 's' : ''}</span>` : 
+                        '<span class="sort-hint">Ctrl+Clic para ordenamiento múltiple</span>'
+                    }
+                </div>
+            </div>
             <div class="table-wrapper">
                 <table class="data-table enhanced">
                     <thead>
@@ -92,24 +111,38 @@ class DataTable {
 
         this.container.innerHTML = tableHTML;
         this._bindColumnSortEvents();
+        this._bindResetButton();
     }
 
     /**
-     * Renderiza el header de una columna con controles de ordenamiento
+     * Renderiza el header de una columna con controles de ordenamiento múltiple
      */
     _renderColumnHeader(col) {
-        const isCurrentSort = this.sortColumn === col;
-        const sortIcon = isCurrentSort ? 
-            (this.sortOrder === 'asc' ? '↑' : '↓') : '↕';
-        const sortClass = isCurrentSort ? `sorted-${this.sortOrder}` : '';
+        const sortInfo = this.sortColumns.find(s => s.column === col);
+        const sortIndex = this.sortColumns.findIndex(s => s.column === col);
+        
+        let sortIcon = '↕';
+        let sortClass = '';
+        let sortPriority = '';
+        
+        if (sortInfo) {
+            sortIcon = sortInfo.order === 'asc' ? '↑' : '↓';
+            sortClass = `sorted-${sortInfo.order}`;
+            if (this.sortColumns.length > 1) {
+                sortPriority = `<span class="sort-priority">${sortIndex + 1}</span>`;
+            }
+        }
         
         return `
             <th class="sortable-column ${sortClass}" 
                 data-column="${DOM.escapeHtml(col)}" 
-                title="Clic para ordenar por ${DOM.escapeHtml(col)}">
+                title="Clic: ordenar | Ctrl+Clic: ordenamiento múltiple | Clic repetido: quitar orden">
                 <div class="column-header">
                     <span class="column-name">${DOM.escapeHtml(col)}</span>
-                    <span class="sort-indicator">${sortIcon}</span>
+                    <div class="sort-controls">
+                        ${sortPriority}
+                        <span class="sort-indicator">${sortIcon}</span>
+                    </div>
                 </div>
             </th>
         `;
@@ -231,31 +264,102 @@ class DataTable {
     }
 
     /**
-     * Vincula eventos de ordenamiento de columnas
+     * Vincula eventos de ordenamiento de columnas con soporte múltiple
      */
     _bindColumnSortEvents() {
         const sortableColumns = this.container.querySelectorAll('.sortable-column');
         sortableColumns.forEach(col => {
-            col.addEventListener('click', () => {
+            col.addEventListener('click', (event) => {
                 const columnName = col.dataset.column;
-                this._handleColumnSort(columnName);
+                this._handleColumnSort(columnName, event);
             });
         });
     }
 
     /**
-     * Maneja el clic en una columna para ordenamiento
+     * Vincula el evento del botón de reseteo
      */
-    _handleColumnSort(columnName) {
-        if (this.sortColumn === columnName) {
-            // Cambiar orden si es la misma columna
-            this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    _bindResetButton() {
+        const resetButton = this.container.querySelector('.btn-reset-sort');
+        if (resetButton) {
+            resetButton.addEventListener('click', () => {
+                this.resetAllSorting();
+            });
+        }
+    }
+
+    /**
+     * NUEVO: Maneja el ordenamiento múltiple de columnas
+     */
+    _handleColumnSort(columnName, event) {
+        // Verificar si Ctrl/Cmd está presionado para ordenamiento múltiple
+        const isMultiSort = event.ctrlKey || event.metaKey;
+        
+        if (!isMultiSort) {
+            // Ordenamiento simple - limpiar otros y solo esta columna
+            const existing = this.sortColumns.find(s => s.column === columnName);
+            if (existing) {
+                // Si ya existe, alternar orden o quitar si es desc
+                if (existing.order === 'asc') {
+                    existing.order = 'desc';
+                } else {
+                    // Quitar ordenamiento
+                    this.sortColumns = [];
+                }
+            } else {
+                // Nueva columna
+                this.sortColumns = [{column: columnName, order: 'asc'}];
+            }
         } else {
-            // Nueva columna, empezar con ascendente
-            this.sortColumn = columnName;
-            this.sortOrder = 'asc';
+            // Ordenamiento múltiple
+            const existingIndex = this.sortColumns.findIndex(s => s.column === columnName);
+            
+            if (existingIndex >= 0) {
+                const existing = this.sortColumns[existingIndex];
+                if (existing.order === 'asc') {
+                    existing.order = 'desc';
+                } else {
+                    // Quitar esta columna del ordenamiento
+                    this.sortColumns.splice(existingIndex, 1);
+                }
+            } else {
+                // Agregar nueva columna (máximo 3)
+                if (this.sortColumns.length < this.maxSortColumns) {
+                    this.sortColumns.push({column: columnName, order: 'asc'});
+                } else {
+                    // Reemplazar la más antigua
+                    this.sortColumns.shift();
+                    this.sortColumns.push({column: columnName, order: 'asc'});
+                }
+            }
         }
         
+        // Actualizar variables de compatibilidad
+        this._updateLegacySortVariables();
+        
+        this._triggerDataReload();
+    }
+
+    /**
+     * NUEVO: Actualiza las variables de ordenamiento legacy para compatibilidad
+     */
+    _updateLegacySortVariables() {
+        if (this.sortColumns.length > 0) {
+            this.sortColumn = this.sortColumns[0].column;
+            this.sortOrder = this.sortColumns[0].order;
+        } else {
+            this.sortColumn = null;
+            this.sortOrder = 'asc';
+        }
+    }
+
+    /**
+     * NUEVO: Resetea todos los ordenamientos
+     */
+    resetAllSorting() {
+        this.sortColumns = [];
+        this.sortColumn = null;
+        this.sortOrder = 'asc';
         this._triggerDataReload();
     }
 
@@ -264,11 +368,21 @@ class DataTable {
      */
     _triggerDataReload() {
         if (this.onDataChange) {
+            // Convertir array de sort a string para el backend
+            let sortColumn = null;
+            let sortOrder = 'asc';
+            
+            if (this.sortColumns.length > 0) {
+                // Solo enviar la primera columna al backend (limitación actual)
+                sortColumn = this.sortColumns[0].column;
+                sortOrder = this.sortColumns[0].order;
+            }
+            
             this.onDataChange({
                 page: 1, // Volver a la primera página
                 search: this.searchTerm,
-                sortColumn: this.sortColumn,
-                sortOrder: this.sortOrder
+                sortColumn: sortColumn,
+                sortOrder: sortOrder
             });
         }
     }
@@ -286,8 +400,12 @@ class DataTable {
                 infoText += ` (filtrados)`;
             }
             
-            if (sort_applied) {
-                infoText += ` • Ordenado por ${this.sortColumn}`;
+            if (sort_applied || this.sortColumns.length > 0) {
+                if (this.sortColumns.length > 1) {
+                    infoText += ` • Ordenado por ${this.sortColumns.length} columnas`;
+                } else if (this.sortColumns.length === 1) {
+                    infoText += ` • Ordenado por ${this.sortColumns[0].column}`;
+                }
             }
             
             if (this.hasCustomNames) {
@@ -298,7 +416,7 @@ class DataTable {
                 <div class="records-info-content">
                     <span class="records-count">${infoText}</span>
                     ${search_applied ? '<span class="filter-badge">Filtrado</span>' : ''}
-                    ${sort_applied ? '<span class="sort-badge">Ordenado</span>' : ''}
+                    ${(sort_applied || this.sortColumns.length > 0) ? '<span class="sort-badge">Ordenado</span>' : ''}
                 </div>
             `;
         }
@@ -480,15 +598,17 @@ class DataTable {
             search: this.searchTerm,
             sortColumn: this.sortColumn,
             sortOrder: this.sortOrder,
+            sortColumns: this.sortColumns, // NUEVO: Información completa de ordenamiento múltiple
             page: this.currentPage
         };
     }
 
     /**
-     * Restablece todos los filtros
+     * ACTUALIZADO: Restablece todos los filtros incluyendo ordenamiento múltiple
      */
     resetFilters() {
         this.searchTerm = '';
+        this.sortColumns = [];
         this.sortColumn = null;
         this.sortOrder = 'asc';
         
@@ -510,7 +630,8 @@ class DataTable {
             hasCustomNames: this.hasCustomNames,
             searchTerm: this.searchTerm,
             sortColumn: this.sortColumn,
-            sortOrder: this.sortOrder
+            sortOrder: this.sortOrder,
+            sortColumns: this.sortColumns // NUEVO
         };
     }
 
@@ -534,10 +655,12 @@ class DataTable {
         this.columns = [];
         this.data = [];
         this.searchTerm = '';
+        this.sortColumns = []; // NUEVO
         this.sortColumn = null;
         this.sortOrder = 'asc';
         this.hasCustomNames = false;
     }
+
     /**
      * Exporta los datos actuales con filtros aplicados
      */
