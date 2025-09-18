@@ -155,10 +155,21 @@ function showNotification(message, type='success') {
     const notification = document.getElementById('notification');
     const msg = document.getElementById('notificationMessage');
     if (notification && msg) {
-        msg.textContent = message;
+        // Limpiar clases anteriores
         notification.className = `notification ${type}`;
+        notification.classList.remove('hiding');
+        
+        msg.textContent = message;
         notification.classList.remove('hidden');
-        setTimeout(() => notification.classList.add('hidden'), 5000);
+        
+        // Auto-ocultar con animación
+        setTimeout(() => {
+            notification.classList.add('hiding');
+            setTimeout(() => {
+                notification.classList.add('hidden');
+                notification.classList.remove('hiding');
+            }, 300);
+        }, 4000);
     }
 }
 
@@ -171,4 +182,334 @@ function translateFrequency(f) {
 
 function translatePermission(p) {
     return { 'public':'Público','internal':'Interno','confidential':'Confidencial' }[p] || p;
+}
+
+// Función para crear metadatos de un archivo específico
+function createMetadataForFile(filename) {
+    currentEditingFile = null;
+    document.getElementById('modalTitle').textContent = 'Crear Metadatos';
+    document.getElementById('submitBtn').textContent = 'Crear Metadatos';
+    resetMetadataForm();
+    
+    // Pre-seleccionar el archivo
+    const filenameSelect = document.getElementById('filename');
+    if (filenameSelect) {
+        filenameSelect.innerHTML = `<option value="${filename}" selected>${filename}</option>`;
+        filenameSelect.disabled = true;
+    }
+    
+    showModal();
+}
+
+// Función para mostrar el formulario de creación general
+function showCreateForm() {
+    currentEditingFile = null;
+    document.getElementById('modalTitle').textContent = 'Crear Metadatos';
+    document.getElementById('submitBtn').textContent = 'Crear Metadatos';
+    resetMetadataForm();
+    loadFilesForSelect();
+    showModal();
+}
+
+// Función para editar metadatos existentes
+async function editMetadata(filename) {
+    showLoading(true);
+    try {
+        const res = await fetch(`${API_BASE}/admin/metadata/${filename}`, {
+            credentials: 'include'
+        });
+        
+        if (!res.ok) throw new Error('Error cargando metadatos');
+        
+        const data = await res.json();
+        
+        currentEditingFile = filename;
+        document.getElementById('modalTitle').textContent = 'Editar Metadatos';
+        document.getElementById('submitBtn').textContent = 'Actualizar Metadatos';
+        
+        // Llenar el formulario con los datos existentes
+        populateForm(data);
+        showModal();
+        
+    } catch (error) {
+        showNotification('Error cargando metadatos: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Función para eliminar metadatos
+async function deleteMetadata(filename) {
+    if (!confirm(`¿Estás seguro de que quieres eliminar los metadatos de "${filename}"?`)) {
+        return;
+    }
+    
+    showLoading(true);
+    try {
+        const res = await fetch(`${API_BASE}/admin/metadata/${filename}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (!res.ok) throw new Error('Error eliminando metadatos');
+        
+        showNotification('Metadatos eliminados correctamente');
+        loadMetadataList(); // Recargar la lista
+        
+    } catch (error) {
+        showNotification('Error eliminando metadatos: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// === FUNCIONES DE MODAL ===
+
+function showModal() {
+    const modal = document.getElementById('metadataModal');
+    const modalContent = modal?.querySelector('.modal-content');
+    
+    if (modal && modalContent) {
+        modal.style.display = 'block';
+        modal.classList.add('showing');
+        modalContent.classList.add('showing');
+        
+        // Limpiar clases después de la animación
+        setTimeout(() => {
+            modal.classList.remove('showing');
+            modalContent.classList.remove('showing');
+        }, 300);
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('metadataModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    resetMetadataForm();
+}
+
+function resetMetadataForm() {
+    const form = document.getElementById('metadataForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Rehabilitar el selector de archivo
+    const filenameSelect = document.getElementById('filename');
+    if (filenameSelect) {
+        filenameSelect.disabled = false;
+        filenameSelect.innerHTML = '<option value="">Seleccionar archivo...</option>';
+    }
+    
+    currentEditingFile = null;
+}
+
+function populateForm(data) {
+    // Llenar el formulario con los datos para editar
+    document.getElementById('filename').innerHTML = `<option value="${data.filename}" selected>${data.filename}</option>`;
+    document.getElementById('filename').disabled = true;
+    document.getElementById('title').value = data.title || '';
+    document.getElementById('description').value = data.description || '';
+    document.getElementById('responsible').value = data.responsible || '';
+    document.getElementById('frequency').value = data.frequency || '';
+    document.getElementById('permissions').value = data.permissions || 'public';
+    document.getElementById('tags').value = data.tags ? data.tags.join(', ') : '';
+}
+
+async function loadFilesForSelect() {
+    try {
+        const res = await fetch(`${API_BASE}/admin/files-without-metadata`, {
+            credentials: 'include'
+        });
+        
+        if (res.ok) {
+            const files = await res.json();
+            const select = document.getElementById('filename');
+            if (select) {
+                select.innerHTML = '<option value="">Seleccionar archivo...</option>' +
+                    files.map(file => `<option value="${file.filename}">${file.filename}</option>`).join('');
+                select.disabled = false;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading files:', error);
+    }
+}
+
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    
+    // Aplicar estado de carga
+    submitBtn.classList.add('btn-loading');
+    submitBtn.textContent = 'Procesando...';
+    submitBtn.disabled = true;
+    
+    // Obtener valores directamente por ID
+    const data = {
+        filename: document.getElementById('filename').value,
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        responsible: document.getElementById('responsible').value,
+        frequency: document.getElementById('frequency').value,
+        permissions: document.getElementById('permissions').value,
+        tags: document.getElementById('tags').value ? 
+            document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t) : []
+    };
+    
+    if (!data.filename || !data.title) {
+        showNotification('Por favor completa los campos obligatorios (Archivo y Título)', 'error');
+        resetSubmitButton(submitBtn, originalText);
+        return;
+    }
+    
+    try {
+        const url = currentEditingFile 
+            ? `${API_BASE}/admin/metadata/${currentEditingFile}`
+            : `${API_BASE}/admin/metadata`;
+            
+        const method = currentEditingFile ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+        
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.detail || 'Error guardando metadatos');
+        }
+        
+        // Animación de éxito
+        submitBtn.classList.remove('btn-loading');
+        submitBtn.classList.add('btn-success');
+        submitBtn.textContent = '¡Guardado!';
+        
+        showNotification(
+            currentEditingFile ? 'Metadatos actualizados correctamente' : 'Metadatos creados correctamente',
+            'success'
+        );
+        
+        setTimeout(() => {
+            closeModal();
+            loadMetadataList();
+            if (!currentEditingFile) {
+                loadFilesWithoutMetadata();
+            }
+        }, 1000);
+        
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+        resetSubmitButton(submitBtn, originalText);
+    }
+}
+
+function resetSubmitButton(submitBtn, originalText) {
+    submitBtn.classList.remove('btn-loading', 'btn-success');
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+}
+
+// === FUNCIONES ADICIONALES ===
+
+// Reemplaza la función applyFilters actual
+async function applyFilters() {
+    const searchTerm = document.getElementById('searchMetadata').value.toLowerCase();
+    const responsibleFilter = document.getElementById('filterByResponsible').value;
+    const permissionFilter = document.getElementById('filterByPermission').value;
+    
+    showLoading(true);
+    try {
+        const res = await fetch(`${API_BASE}/admin/metadata`, { credentials: 'include' });
+        if (!res.ok) throw new Error(res.statusText);
+        let data = await res.json();
+        
+        // Aplicar filtros
+        if (searchTerm) {
+            data = data.filter(item => 
+                item.filename.toLowerCase().includes(searchTerm) ||
+                item.title.toLowerCase().includes(searchTerm) ||
+                (item.description && item.description.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        if (responsibleFilter) {
+            data = data.filter(item => item.responsible === responsibleFilter);
+        }
+        
+        if (permissionFilter) {
+            data = data.filter(item => item.permissions === permissionFilter);
+        }
+        
+        updateMetadataTable(data);
+        
+        // Actualizar opciones de filtros
+        updateFilterOptions(data);
+        
+    } catch (e) {
+        showNotification('Error aplicando filtros: ' + e.message, 'error');
+    } finally { 
+        showLoading(false); 
+    }
+}
+
+function updateFilterOptions(allData) {
+    // Actualizar responsables
+    const responsibles = [...new Set(allData.map(item => item.responsible).filter(Boolean))];
+    const responsibleSelect = document.getElementById('filterByResponsible');
+    if (responsibleSelect) {
+        const currentValue = responsibleSelect.value;
+        responsibleSelect.innerHTML = '<option value="">Todos los responsables</option>' +
+            responsibles.map(r => `<option value="${r}" ${r === currentValue ? 'selected' : ''}>${r}</option>`).join('');
+    }
+    
+    // Actualizar permisos
+    const permissions = [...new Set(allData.map(item => item.permissions).filter(Boolean))];
+    const permissionSelect = document.getElementById('filterByPermission');
+    if (permissionSelect) {
+        const currentValue = permissionSelect.value;
+        permissionSelect.innerHTML = '<option value="">Todos los permisos</option>' +
+            permissions.map(p => `<option value="${p}" ${p === currentValue ? 'selected' : ''}>${translatePermission(p)}</option>`).join('');
+    }
+}
+
+// Agregar búsqueda en tiempo real
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('searchMetadata');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyFilters, 500);
+        });
+    }
+});
+
+function closeNotification() {
+    const notification = document.getElementById('notification');
+    if (notification) {
+        notification.classList.add('hidden');
+    }
+}
+
+function logout() {
+    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        window.location.href = '/admin/logout';
+    }
+}
+
+// Cerrar modal al hacer clic fuera de él
+window.onclick = function(event) {
+    const modal = document.getElementById('metadataModal');
+    if (event.target === modal) {
+        closeModal();
+    }
 }

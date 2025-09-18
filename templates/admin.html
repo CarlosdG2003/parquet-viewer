@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administrador - Parquet Viewer</title>
     <link rel="stylesheet" href="/static/css/admin.css">
-    <link rel="stylesheet" href="static/css/datatable-module.css">
+    <link rel="stylesheet" href="/static/css/datatable-module.css">
 </head>
 <body>
     <div class="admin-container">
@@ -112,12 +112,21 @@
             <div id="fileColumnsInfo" class="file-info-panel hidden">
                 <div class="info-header">
                     <h3 id="currentFileName">-</h3>
-                    <div class="info-actions">
-                        <button onclick="syncFileColumns()" class="btn-secondary">Sincronizar</button>
-                        <button onclick="previewWithCustomNames()" class="btn-secondary">Vista Previa</button>
-                        <button onclick="exportColumnsConfig()" class="btn-secondary">Exportar Config</button>
-                        <button onclick="showImportDialog()" class="btn-secondary">Importar Config</button>
-                    </div>
+            <div class="info-actions">
+            <div class="dropdown">
+                <button class="btn dropdown-toggle" id="advancedOptionsBtn">
+                    Opciones Avanzadas
+                </button>
+            <div id="advancedOptionsMenu" class="dropdown-menu hidden">
+                    <button onclick="previewWithCustomNames()" class="dropdown-item">Vista Previa</button>
+                    <button onclick="exportColumnsConfig()" class="dropdown-item">Exportar Config</button>
+                    <button onclick="showImportDialog()" class="dropdown-item">Importar Config</button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="syncFileColumns()" class="btn-secondary">Sincronizar</button>
+
+            </div>
+        </div>
+    </div>
                 </div>
                 
                 <div class="columns-stats">

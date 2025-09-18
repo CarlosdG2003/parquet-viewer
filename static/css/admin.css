@@ -204,35 +204,744 @@ body {
   .metadata-table { overflow-x: auto; }
 }
 
-/* ===== Gestión de Columnas ===== */
-.grid-columns {
-  display: grid;
-  grid-template-columns: 40px 60px 1fr 1fr 1fr 100px 120px;
-  gap: 0.5rem;
-  align-items: center;
-}
-
+/* ===== Gestión de Columnas - Alineación corregida ===== */
 .columns-header {
   display: grid;
-  grid-template-columns: 40px 60px 1fr 1fr 1fr 100px 120px;
-  gap: 0.5rem;
-  align-items: center;
+  grid-template-columns: 50px 80px 200px 200px 250px 120px 100px;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 0; /* Sin margen extra */
+  background: var(--bg);
   border-bottom: 2px solid var(--border);
-  margin-bottom: 0.5rem;
   font-weight: 600;
   color: var(--text-muted);
+  align-items: center;
+  font-size: 0.875rem;
 }
 
 .column-row {
   display: grid;
-  grid-template-columns: 40px 60px 1fr 1fr 1fr 100px 120px;
+  grid-template-columns: 50px 80px 200px 200px 250px 120px 100px;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.column-row:hover {
+  background: var(--bg);
+}
+
+.column-row:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* Asegurar que los inputs se ajusten a su columna */
+.column-row input[type="text"] {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+}
+
+.column-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Botones reset en la tabla */
+.column-row .btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--secondary);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.column-row .btn-small:hover {
+  background: #475569;
+  transform: none; /* Sin efecto hover en tabla */
+}
+
+/* Responsive para columnas */
+@media (max-width: 1200px) {
+  .columns-header,
+  .column-row {
+    grid-template-columns: 40px 60px 150px 150px 200px 100px 80px;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .columns-header,
+  .column-row {
+    grid-template-columns: 30px 50px 120px 120px 150px 80px 60px;
+    gap: 4px;
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+}
+
+
+/* ===== Mejoras adicionales para botones ===== */
+
+/* Efectos hover mejorados */
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Botones deshabilitados */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Botones con iconos */
+.btn-icon {
+  margin-right: 4px;
+}
+
+/* Botón de guardar con animación */
+#saveColumnsBtn:not(:disabled) {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+}
+
+/* Mejorar botones en las tablas */
+.metadata-table .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  margin: 0 0.125rem;
+}
+
+/* Botones en file-card */
+.file-card .btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+/* ===== Dropdown para opciones avanzadas ===== */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  background: #0891b2;
+  color: white;
+}
+
+.dropdown-toggle:hover {
+  background: #0e7490;
+}
+
+.dropdown-toggle::after {
+  content: ' ▼';
+  font-size: 0.7em;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  box-shadow: var(--shadow-md);
+  z-index: 1000;
+  min-width: 200px;
+  padding: 0.5rem 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+}
+
+.dropdown-menu:not(.hidden) {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 0;
+}
+
+.dropdown-item:hover {
+  background: var(--bg);
+  transform: none;
+  box-shadow: none;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  border: none;
+  margin: 0.5rem 0;
+}
+
+/* ===== Indicador de cambios sin guardar ===== */
+.unsaved-indicator {
+  color: var(--warning);
+  font-weight: 600;
+  animation: blink 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes blink {
+  from { opacity: 1; }
+  to { opacity: 0.5; }
+}
+
+/* ===== Info-actions mejorado ===== */
+.info-actions {
+  display: flex;
   gap: 0.5rem;
   align-items: center;
-  padding: .5rem 0;
-  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
-.column-row:nth-child(even) { background-color: var(--bg); }
 
-.columns-container { max-width: 1000px; margin: 0 auto; background: var(--card-bg); border: 1px solid var(--border); border-radius: .5rem; box-shadow: var(--shadow-sm); padding: 1.5rem; }
-.columns-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem; }
-.unsaved-indicator { color: var(--warning); font-weight: 600; }
+/* ===== Section header mejorado ===== */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.section-header h2 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.section-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* ===== File select mejorado ===== */
+.file-select {
+  min-width: 250px;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+/* ===== File info panel ===== */
+.file-info-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.info-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.125rem;
+  word-break: break-all;
+}
+
+.columns-stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.columns-stats strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+
+/* Botones en section-header */
+.section-header .btn-primary,
+.section-header button {
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.section-header .btn-primary:hover,
+.section-header button:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Botón filtrar en los filtros */
+.filters button,
+.filters .btn-secondary {
+  background: var(--secondary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filters button:hover,
+.filters .btn-secondary:hover {
+  background: #475569;
+  transform: translateY(-1px);
+}
+
+/* Botón actualizar en archivos sin metadatos */
+.btn-refresh {
+  background: var(--success) !important;
+  color: white !important;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-refresh:hover {
+  background: #047857 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+/* Botones en gestión de columnas */
+#saveColumnsBtn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#saveColumnsBtn:hover:not(:disabled) {
+  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.section-actions .btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.section-actions .btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Botón cerrar sesión */
+.header-actions .btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-actions .btn-danger:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.header-actions .btn-secondary {
+  background: var(--secondary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.header-actions .btn-secondary:hover {
+  background: #475569;
+  transform: translateY(-1px);
+}
+
+/* ===== Botones del modal de metadatos ===== */
+.form-actions .btn-secondary,
+.form-actions .btn-primary {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-actions .btn-secondary {
+    background: var(--secondary);
+    color: white;
+}
+
+.form-actions .btn-secondary:hover {
+    background: #475569;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+}
+
+.form-actions .btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.form-actions .btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Estados específicos del botón submit */
+#submitBtn {
+    background: var(--success);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#submitBtn:hover {
+    background: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+/* Botón cuando está en modo "Actualizar" */
+#submitBtn[data-mode="update"] {
+    background: var(--warning);
+    color: white;
+}
+
+#submitBtn[data-mode="update"]:hover {
+    background: #b45309;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}
+
+/* Efecto de envío del formulario */
+.form-actions .btn-primary:active,
+.form-actions .btn-secondary:active,
+#submitBtn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Botón deshabilitado durante envío */
+.form-actions .btn-primary:disabled,
+#submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Mejorar el espaciado de form-actions */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border);
+}
+
+/* Responsivo para los botones del modal */
+@media (max-width: 480px) {
+    .form-actions {
+        flex-direction: column-reverse;
+        gap: 0.75rem;
+    }
+    
+    .form-actions .btn-secondary,
+    .form-actions .btn-primary,
+    #submitBtn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ===== Toolbar de columnas (nuevo) ===== */
+.columns-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.toolbar-left {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+/* ===== Mejora del contenedor de columnas ===== */
+.columns-container { 
+    width: 100%; /* Cambiar de max-width a width 100% */
+    margin: 0;
+    background: var(--card-bg); 
+    border: 1px solid var(--border); 
+    border-radius: .5rem; 
+    box-shadow: var(--shadow-sm); 
+    padding: 0;
+}
+
+/* Asegurar que la lista de columnas también use todo el ancho */
+#columnsList {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Ajustar el grid para usar todo el espacio disponible */
+.columns-header,
+.column-row {
+    grid-template-columns: 50px 80px 1fr 1fr 2fr 120px 100px;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+/* ===== ANIMACIONES PARA ACCIONES ===== */
+
+/* Animaciones de éxito */
+@keyframes successPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+}
+
+/* Animaciones de carga */
+@keyframes buttonLoading {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Estados de botones con animaciones */
+.btn-loading {
+    background: linear-gradient(-45deg, #0891b2, #06b6d4, #0891b2, #06b6d4) !important;
+    background-size: 400% 400% !important;
+    animation: buttonLoading 1.5s ease infinite;
+    pointer-events: none;
+    position: relative;
+    overflow: hidden;
+    color: white !important;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.btn-success {
+    animation: successPulse 0.6s ease-out;
+    background: var(--success) !important;
+}
+
+/* Animaciones para notificaciones mejoradas */
+.notification {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.notification.hiding {
+    animation: slideOutRight 0.3s ease-in;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+/* Animación para filas de tabla cuando se actualizan */
+.column-row.updated {
+    animation: rowFlash 0.8s ease-out;
+}
+
+@keyframes rowFlash {
+    0% { background-color: rgba(5, 150, 105, 0.1); }
+    50% { background-color: rgba(5, 150, 105, 0.3); }
+    100% { background-color: transparent; }
+}
+
+/* Animación para elementos que aparecen */
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animación para modales */
+.modal.showing {
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+.modal-content.showing {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Indicador de cambios sin guardar mejorado */
+.unsaved-indicator {
+    animation: unsavedPulse 2s ease-in-out infinite;
+}
+
+@keyframes unsavedPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* ===== Responsive para toolbar ===== */
+@media (max-width: 768px) {
+    .columns-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .toolbar-right {
+        margin-left: 0;
+        justify-content: flex-end;
+    }
+}
+
+/* ===== Corrección de alineación para lista de columnas ===== */
+.columns-list {
+    padding: 0;
+    margin: 0;
+}
+
+#columnsList {
+    padding: 0;
+    margin: 0;
+}
+
+#columnsContainer {
+    padding: 0;
+    margin: 0;
+}
+
+/* Ajuste temporal para alineación perfecta */
+.columns-header,
+.column-row {
+    grid-template-columns: 45px 75px 195px 195px 245px 115px 95px;
+    gap: 10px;
+}

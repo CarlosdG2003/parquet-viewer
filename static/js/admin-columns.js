@@ -128,8 +128,16 @@ function markUnsavedChanges() {
 
 async function saveAllColumnChanges() {
     if (!hasUnsavedChanges) return;
+    
+    const saveBtn = document.getElementById('saveColumnsBtn');
+    const originalText = saveBtn.textContent;
+    
+    // Estado de carga
+    saveBtn.classList.add('btn-loading');
+    saveBtn.textContent = 'Guardando...';
+    saveBtn.disabled = true;
+    
     const updates = collectColumnChanges();
-    showLoadingSpinner();
 
     try {
         const res = await fetch(`/admin/files/${currentFileName}/columns/bulk-update`, {
@@ -140,17 +148,35 @@ async function saveAllColumnChanges() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const result = await res.json();
+        
+        // Animación de éxito
+        saveBtn.classList.remove('btn-loading');
+        saveBtn.classList.add('btn-success');
+        saveBtn.textContent = '¡Guardado!';
+        
+        // Animar filas actualizadas
+        document.querySelectorAll('.column-row').forEach(row => {
+            row.classList.add('updated');
+            setTimeout(() => row.classList.remove('updated'), 800);
+        });
+        
         showNotification(`Cambios guardados: ${result.results.updated} actualizadas, ${result.results.created} creadas`, 'success');
 
         await loadFileColumns();
         hasUnsavedChanges = false;
         document.getElementById('unsavedChangesIndicator')?.classList.add('hidden');
-        document.getElementById('saveColumnsBtn')?.setAttribute('disabled', true);
+        
+        setTimeout(() => {
+            saveBtn.classList.remove('btn-success');
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = true;
+        }, 2000);
 
     } catch (e) {
         showNotification('Error guardando cambios: ' + e.message, 'error');
-    } finally {
-        hideLoadingSpinner();
+        saveBtn.classList.remove('btn-loading');
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
     }
 }
 
@@ -225,3 +251,37 @@ function showNotification(message, type = 'info') {
     notif.classList.remove('hidden');
     setTimeout(() => notif.classList.add('hidden'), 5000);
 }
+
+function toggleAdvancedOptions() {
+    const menu = document.getElementById('advancedOptionsMenu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+// Cerrar dropdown al hacer clic fuera
+document.addEventListener('click', (event) => {
+    const dropdown = document.querySelector('.dropdown');
+    const menu = document.getElementById('advancedOptionsMenu');
+    
+    if (dropdown && menu && !dropdown.contains(event.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+// Funciones placeholder para las opciones del menú
+function validateColumnConfig() {
+    alert('Función de validación en desarrollo');
+}
+
+function backupCurrentConfig() {
+    alert('Función de backup en desarrollo');
+}
+
+// Vincular el evento después de que se cargue el DOM
+document.addEventListener('DOMContentLoaded', () => {
+    const advancedBtn = document.getElementById('advancedOptionsBtn');
+    if (advancedBtn) {
+        advancedBtn.addEventListener('click', toggleAdvancedOptions);
+    }
+});
