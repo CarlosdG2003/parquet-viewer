@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power BI Model Generator</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        /* Estilos específicos para el módulo Power BI */
+        .powerbi-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .project-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .project-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .project-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .project-status.ready {
+            background: #d4edda;
+            color: var(--success);
+        }
+
+        .project-status.processing {
+            background: #fff3cd;
+            color: var(--warning);
+        }
+
+        .project-status.error {
+            background: #f8d7da;
+            color: var(--danger);
+        }
+
+        .relationship-diagram {
+            width: 100%;
+            height: 600px;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .table-node {
+            position: absolute;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 0.5rem;
+            min-width: 200px;
+            box-shadow: var(--shadow-sm);
+            cursor: move;
+        }
+
+        .table-header {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem;
+            font-weight: 600;
+            border-radius: 0.25rem 0.25rem 0 0;
+        }
+
+        .table-columns {
+            padding: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .column-item:last-child {
+            border-bottom: none;
+        }
+
+        .column-key {
+            color: var(--warning);
+            margin-right: 0.5rem;
+        }
+
+        .relationship-line {
+            position: absolute;
+            height: 2px;
+            background: var(--secondary);
+            z-index: 1;
+            transform-origin: left center;
+        }
+
+        .relationship-arrow {
+            position: absolute;
+            right: -8px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid var(--secondary);
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+
+        .export-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .export-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .export-card:hover {
+            border-color: var(--primary);
+            background: var(--bg);
+        }
+
+        .export-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .file-upload-area:hover,
+        .file-upload-area.dragover {
+            border-color: var(--primary);
+            background: var(--bg);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 0.5rem;
+            background: var(--border);
+            border-radius: 0.25rem;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .tabs-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .validation-result {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .validation-result.valid {
+            background: #d4edda;
+            border: 1px solid var(--success);
+            color: #155724;
+        }
+
+        .validation-result.invalid {
+            background: #f8d7da;
+            border: 1px solid var(--danger);
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .powerbi-container {
+                padding: 1rem;
+            }
+            
+            .project-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .export-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs-nav {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="powerbi-container">
+        <div class="page-header">
+            <h1>Power BI Model Generator</h1>
+            <p>Crea modelos tabulares automáticamente desde archivos Parquet</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+            <button class="tab-button active" data-tab="projects">Proyectos</button>
+            <button class="tab-button" data-tab="create">Nuevo Proyecto</button>
+            <button class="tab-button" data-tab="help">Ayuda</button>
+        </div>
+
+        <!-- Projects Tab -->
+        <div class="tab-content active" id="projects-tab">
+            <div class="section-header">
+                <h2>Proyectos Power BI</h2>
+                <button class="btn btn-primary" onclick="showCreateProject()">Nuevo Proyecto</button>
+            </div>
+            
+            <div id="projectsGrid" class="project-grid">
+                <!-- Projects will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Create Project Tab -->
+        <div class="tab-content" id="create-tab">
+            <div class="section-header">
+                <h2>Crear Nuevo Proyecto</h2>
+            </div>
+
+            <form id="createProjectForm" enctype="multipart/form-data">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="projectName">Nombre del Proyecto</label>
+                        <input type="text" id="projectName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectDescription">Descripción</label>
+                        <textarea id="projectDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Archivos Parquet</label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <div class="upload-icon">📄</div>
+                        <p>Arrastra archivos Parquet aquí o <strong>haz clic para seleccionar</strong></p>
+                        <p class="text-muted">Se aceptan múltiples archivos .parquet</p>
+                        <input type="file" id="parquetFiles" name="files" multiple accept=".parquet" style="display: none;">
+                    </div>
+                </div>
+
+                <div id="filesList" class="files-list" style="display: none;">
+                    <h4>Archivos Seleccionados:</h4>
+                    <ul id="selectedFiles"></ul>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="resetCreateForm()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Proyecto</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Help Tab -->
+        <div class="tab-content" id="help-tab">
+            <div class="section-header">
+                <h2>Guía de Uso</h2>
+            </div>
+
+            <div class="help-content">
+                <section class="help-section">
+                    <h3>¿Qué hace este módulo?</h3>
+                    <p>Este módulo procesa archivos Parquet y sus metadatos para crear automáticamente modelos tabulares compatibles con Power BI.</p>
+                    
+                    <h4>Características principales:</h4>
+                    <ul>
+                        <li>Lectura automática de archivos Parquet</li>
+                        <li>Extracción de metadatos (incrustados o archivos externos)</li>
+                        <li>Detección automática de relaciones entre tablas</li>
+                        <li>Visor interactivo de relaciones</li>
+                        <li>Exportación a formato Power BI (.pbit)</li>
+                    </ul>
+                </section>
+
+                <section class="help-section">
+                    <h3>Formatos de Metadatos Soportados</h3>
+                    
+                    <h4>1. Metadatos Incrustados en Parquet</h4>
+                    <pre><code>// En el archivo Parquet como key-value metadata
+powerbi_table_name: "Ventas"
+powerbi_relationships: [
+  {
+    "parent_table": "clientes",
+    "child_table": "pedidos", 
+    "parent_column": "cliente_id",
+    "child_column": "cliente_id",
+    "cardinality": "1:N"
+  }
+]</code></pre>
+
+                    <h4>2. Archivo JSON Externo</h4>
+                    <pre><code>// archivo: ventas_metadata.json
+{
+  "friendly_name": "Ventas",
+  "columns": {
+    "fecha_venta": {
+      "friendly_name": "Fecha de Venta",
+      "description": "Fecha cuando se realizó la venta",
+      "format_string": "dd/mm/yyyy"
+    }
+  },
+  "relationships": [
+    {
+      "parent_table": "productos",
+      "child_table": "ventas",
+      "parent_column": "producto_id", 
+      "child_column": "producto_id",
+      "cardinality": "1:N",
+      "cross_filter_direction": "single"
+    }
+  ]
+}</code></pre>
+
+                    <h4>3. Archivo XML Externo</h4>
+                    <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;table_metadata&gt;
+  &lt;friendly_name&gt;Clientes&lt;/friendly_name&gt;
+  &lt;columns&gt;
+    &lt;column name="cliente_id"&gt;
+      &lt;friendly_name&gt;ID Cliente&lt;/friendly_name&gt;
+      &lt;is_key&gt;true&lt;/is_key&gt;
+    &lt;/column&gt;
+  &lt;/columns&gt;
+  &lt;relationships&gt;
+    &lt;relationship&gt;
+      &lt;parent_table&gt;clientes&lt;/parent_table&gt;
+      &lt;child_table&gt;pedidos&lt;/child_table&gt;
+      &lt;parent_column&gt;cliente_id&lt;/parent_column&gt;
+      &lt;child_column&gt;cliente_id&lt;/child_column&gt;
+      &lt;cardinality&gt;1:N&lt;/cardinality&gt;
+    &lt;/relationship&gt;
+  &lt;/relationships&gt;
+&lt;/table_metadata&gt;</code></pre>
+                </section>
+
+                <section class="help-section">
+                    <h3>Proceso de Exportación</h3>
+                    <ol>
+                        <li><strong>Sube archivos Parquet</strong> - El sistema procesará automáticamente los metadatos</li>
+                        <li><strong>Revisa las relaciones</strong> - Usa el visor de diagrama para confirmar/editar relaciones</li>
+                        <li><strong>Valida el modelo</strong> - Ejecuta validaciones antes de exportar</li>
+                        <li><strong>Exporta a Power BI</strong> - Genera archivo .pbit listo para usar</li>
+                    </ol>
+                </section>
+
+                <section class="help-section">
+                    <h3>Uso en Power BI Desktop</h3>
+                    <ol>
+                        <li>Descarga e instala Power BI Desktop</li>
+                        <li>Abre el archivo .pbit generado</li>
+                        <li>Configura la ruta a los archivos Parquet cuando se solicite</li>
+                        <li>Actualiza los datos (Inicio → Actualizar)</li>
+                        <li>Verifica el modelo en la vista de Modelo</li>
+                    </ol>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Detail Modal -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="projectModalTitle">Detalles del Proyecto</h3>
+                <span class="close" onclick="closeProjectModal()">&times;</span>
+            </div>
+            
+            <div id="projectModalContent">
+                <!-- Project details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Relationship Editor Modal -->
+    <div id="relationshipModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="relationshipModalTitle">Editar Relación</h3>
+                <span class="close" onclick="closeRelationshipModal()">&times;</span>
+            </div>
+            
+            <form id="relationshipForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="parentTable">Tabla Padre</label>
+                        <select id="parentTable" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="childTable">Tabla Hija</label>
+                        <select id="childTable" required></select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="parentColumn">Columna Padre</label>
+                        <select id="parentColumn" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="childColumn">Columna Hija</label>
+                        <select id="childColumn" required></select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cardinality">Cardinalidad</label>
+                        <select id="cardinality" required>
+                            <option value="1:1">Uno a Uno (1:1)</option>
+                            <option value="1:N" selected>Uno a Muchos (1:N)</option>
+                            <option value="N:1">Muchos a Uno (N:1)</option>
+                            <option value="N:N">Muchos a Muchos (N:N)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="crossFilterDirection">Filtrado Cruzado</label>
+                        <select id="crossFilterDirection">
+                            <option value="single" selected>Una Dirección</option>
+                            <option value="both">Ambas Direcciones</option>
+                            <option value="none">Sin Filtrado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isActive" checked>
+                        Relación Activa
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeRelationshipModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Relación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner hidden">
+        <div class="spinner"></div>
+        <p>Procesando...</p>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notification" class="notification hidden">
+        <span id="notificationMessage"></span>
+        <button onclick="closeNotification()" class="notification-close">&times;</button>
+    </div>
+
+    <script src="/static/js/power-bi-module.js"></script>
+</body>
+</html>

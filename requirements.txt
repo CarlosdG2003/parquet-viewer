@@ -3,6 +3,9 @@ uvicorn[standard]==0.24.0
 duckdb
 pandas==2.1.4
 python-multipart==0.0.6
+pyarrow
+numpy
+fastparquet
 
 # PostgreSQL dependencies
 asyncpg==0.29.0
@@ -10,3 +13,7 @@ sqlalchemy[asyncio]==2.0.23
 
 # Environment variables
 python-dotenv==1.0.0
+
+openpyxl
+xlsxwriter
+lxml

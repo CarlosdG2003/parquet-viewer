@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import NullPool
 import duckdb
 from typing import AsyncGenerator
+from models.power_bi_models import PowerBIProject, PowerBITable, PowerBIColumn, PowerBIRelationship, PowerBIExport
 
 # Base para modelos SQLAlchemy
 Base = declarative_base()
