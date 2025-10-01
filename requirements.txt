@@ -6,6 +6,7 @@ python-multipart==0.0.6
 pyarrow
 numpy
 fastparquet
+requests
 
 # PostgreSQL dependencies
 asyncpg==0.29.0
